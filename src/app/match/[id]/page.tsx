@@ -1,9 +1,13 @@
 import { notFound } from 'next/navigation';
-import { getMatch, stageNames, formatDate } from '@/data/matches';
-import { getTeam, allMatches } from '@/data';
+import { getMatch, stageNames, formatDate, allMatches } from '@/data/matches';
+import { getTeam } from '@/data/teams';
 import { predictMatch } from '@/lib/ai';
 import { generateOdds } from '@/data/odds';
 import Link from 'next/link';
+
+export async function generateStaticParams() {
+  return allMatches.map(m => ({ id: m.id }));
+}
 
 export default async function MatchPage({
   params,
