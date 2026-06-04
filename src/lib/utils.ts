@@ -47,8 +47,8 @@ export function countdownTo(targetDate: string, targetTime: string): string {
 
 export function worldCupCountdown(): { days: number; hours: number; minutes: number; seconds: number } {
   const now = new Date();
-  // World Cup starts June 11, 2026 at 20:00 Beijing time (12:00 UTC)
-  const kickoff = new Date('2026-06-11T12:00:00Z');
+  // World Cup starts June 12, 2026 at 03:00 Beijing time (June 11 19:00 UTC)
+  const kickoff = new Date('2026-06-11T19:00:00Z');
   const diff = kickoff.getTime() - now.getTime();
 
   if (diff < 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };

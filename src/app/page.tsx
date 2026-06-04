@@ -6,7 +6,7 @@ import { getSimulatedStandings, getChampionshipProbabilities } from '@/data/stan
 import { getTeam } from '@/data/teams';
 
 export default function HomePage() {
-  const today = '2026-06-11';
+  const today = '2026-06-12'; // Opening day — Mexico vs South Africa
   const todayMatches = allMatches.filter(m => m.date === today && m.stage === 'group');
   const tomorrowMatches = allMatches.filter(m => m.date === '2026-06-12' && m.stage === 'group');
 
@@ -26,7 +26,7 @@ export default function HomePage() {
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-1.5 text-sm mb-6">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span>2026 FIFA World Cup · 6月11日 - 7月19日 · 美国/加拿大/墨西哥</span>
+              <span>2026 FIFA World Cup · 6月12日 - 7月20日 · 美国/加拿大/墨西哥</span>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-extrabold mb-4 tracking-tight">
@@ -81,7 +81,7 @@ export default function HomePage() {
       <section className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-bold text-gray-900">
-            📅 开幕日 <span className="text-sm font-normal text-gray-500">6月11日（周四）</span>
+            📅 开幕日 <span className="text-sm font-normal text-gray-500">6月12日（周五）</span>
           </h2>
           <Link href="/schedule" className="text-sm text-green-700 hover:underline font-medium">查看全部 →</Link>
         </div>
