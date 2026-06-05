@@ -31,37 +31,69 @@ export function predictMatch(homeTeamId: string, awayTeamId: string): MatchPredi
     };
   }
 
-  // ELO-based win probability
+  // ── Robust ELO-based prediction ──
   const eloDiff = home.elo - away.elo;
-  let homeWinProb = 1 / (1 + Math.pow(10, -eloDiff / 400));
-  let awayWinProb = 1 / (1 + Math.pow(10, eloDiff / 400));
-  let drawProb = Math.max(0.05, 1 - homeWinProb - awayWinProb);
 
-  // Adjust for recent form
-  const homeFormBonus = (home.recentForm.filter(r => r === 'W').length - home.recentForm.filter(r => r === 'L').length) * 0.02;
-  const awayFormBonus = (away.recentForm.filter(r => r === 'W').length - away.recentForm.filter(r => r === 'L').length) * 0.02;
+  // Expected win rate from ELO (0-1)
+  const expectedHome = 1 / (1 + Math.pow(10, -eloDiff / 400));
+
+  // Draw probability: higher when teams are close (ELO gap small)
+  const absGap = Math.abs(eloDiff);
+  let drawProb = 0.26 - (absGap / 400) * 0.10;
+  drawProb = Math.max(0.15, Math.min(0.28, drawProb));
+
+  // Distribute remaining between home/away
+  const remaining = 1 - drawProb;
+  let homeWinProb = expectedHome * remaining;
+  let awayWinProb = remaining - homeWinProb;
+
+  // Adjust for recent form (capped)
+  const homeForm = home.recentForm.filter(r => r === 'W').length - home.recentForm.filter(r => r === 'L').length;
+  const awayForm = away.recentForm.filter(r => r === 'W').length - away.recentForm.filter(r => r === 'L').length;
+  const homeFormBonus = Math.max(-0.05, Math.min(0.05, homeForm * 0.015));
+  const awayFormBonus = Math.max(-0.05, Math.min(0.05, awayForm * 0.015));
 
   homeWinProb += homeFormBonus;
   awayWinProb += awayFormBonus;
-  drawProb -= (homeFormBonus + awayFormBonus);
+  drawProb -= (homeFormBonus + awayFormBonus) * 0.3;
 
-  // Normalize
+  // Clamp all to valid ranges
+  homeWinProb = Math.max(0.04, Math.min(0.88, homeWinProb));
+  awayWinProb = Math.max(0.04, Math.min(0.88, awayWinProb));
+  drawProb = Math.max(0.12, Math.min(0.32, drawProb));
+
+  // Normalize to exactly 100%
   const total = homeWinProb + awayWinProb + drawProb;
-  homeWinProb = Math.round((homeWinProb / total) * 1000) / 10;
-  drawProb = Math.round((drawProb / total) * 1000) / 10;
-  awayWinProb = Math.round((awayWinProb / total) * 1000) / 10;
+  homeWinProb = (homeWinProb / total) * 100;
+  drawProb = (drawProb / total) * 100;
+  awayWinProb = (awayWinProb / total) * 100;
 
-  // Ensure they sum to 100
-  const roundingAdjust = 100 - homeWinProb - drawProb - awayWinProb;
-  if (Math.abs(roundingAdjust) > 0.1) {
-    homeWinProb += roundingAdjust;
+  // Round to 1 decimal, ensure sum = 100.0
+  homeWinProb = Math.round(homeWinProb * 10) / 10;
+  drawProb = Math.round(drawProb * 10) / 10;
+  awayWinProb = Math.round(awayWinProb * 10) / 10;
+
+  // Fix rounding: adjust largest to make sum=100
+  const sum = homeWinProb + drawProb + awayWinProb;
+  const diff = Math.round((100 - sum) * 10) / 10;
+  if (Math.abs(diff) >= 0.1) {
+    // Add diff to the largest probability
+    if (homeWinProb >= drawProb && homeWinProb >= awayWinProb) homeWinProb += diff;
+    else if (drawProb >= homeWinProb && drawProb >= awayWinProb) drawProb += diff;
+    else awayWinProb += diff;
   }
 
-  // Predicted score
-  const homeStrength = home.elo / 400;
-  const awayStrength = away.elo / 400;
-  const homeGoals = Math.max(0, Math.round(homeStrength * 1.2 - awayStrength * 0.3 + (Math.random() * 0.4)));
-  const awayGoals = Math.max(0, Math.round(awayStrength * 0.8 - homeStrength * 0.2 + (Math.random() * 0.4)));
+  // Final clamp to ensure no negative or >100
+  homeWinProb = Math.max(0, Math.min(100, Math.round(homeWinProb * 10) / 10));
+  drawProb = Math.max(0, Math.min(100, Math.round(drawProb * 10) / 10));
+  awayWinProb = Math.max(0, Math.min(100, Math.round(awayWinProb * 10) / 10));
+
+  // Deterministic predicted score (no Math.random)
+  const homeStrength = home.elo / 200;
+  const awayStrength = away.elo / 200;
+  const seed = (home.elo * 7 + away.elo * 13) % 100 / 100;
+  const homeGoals = Math.max(0, Math.round(homeStrength - awayStrength * 0.15 + seed * 0.5 + 0.4));
+  const awayGoals = Math.max(0, Math.round(awayStrength * 0.7 - homeStrength * 0.1 + (1 - seed) * 0.5));
   const predictedScore = `${homeGoals}-${awayGoals}`;
 
   // Confidence level

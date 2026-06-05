@@ -149,110 +149,122 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
         </div>
       </section>
 
-      {/* ═══════ Main content ═══════ */}
+      {/* ═══════ Screen 2: Two-column layout ═══════ */}
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left column: Radar + Prob */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Left: Radar + Recent Form */}
           <div className="space-y-6">
-            {/* Radar chart */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
               <h3 className="font-bold text-gray-900 mb-1">📊 球队能力</h3>
               <p className="text-xs text-gray-400 mb-4">基于 ELO · FIFA排名 · 近期战绩</p>
-              <RadarChart data={radarData} size={240} />
-              {/* Legend */}
-              <div className="flex justify-center gap-4 mt-3 text-[11px] text-gray-500">
-                {radarData.slice(0, 3).map(d => (
-                  <span key={d.label}>{d.label} {d.value}/10</span>
+              <RadarChart data={radarData} size={220} />
+              <div className="flex justify-center gap-4 mt-2 text-[11px] text-gray-500">
+                {radarData.map(d => (
+                  <span key={d.label}>{d.label} {d.value}</span>
                 ))}
               </div>
             </div>
 
-            {/* Championship bar */}
+            {/* Recent form */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <h3 className="font-bold text-gray-900 mb-4">🏆 夺冠概率对比</h3>
-              <div className="space-y-2">
+              <h3 className="font-bold text-gray-900 mb-3">📈 近期战绩</h3>
+              <div className="flex items-center gap-1.5 mb-4">
+                {team.recentForm.map((f, i) => (
+                  <span
+                    key={i}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                      f === 'W' ? 'bg-qualify-light text-qualify' :
+                      f === 'D' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-500'
+                    }`}
+                  >
+                    {f}
+                  </span>
+                ))}
+                <span className="text-xs text-gray-400 ml-2">
+                  近5场 {team.recentForm.filter(f => f === 'W').length}胜
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {team.recentResults.map((r, i) => (
+                  <div key={i} className="text-xs text-gray-600 flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      team.recentForm[i] === 'W' ? 'bg-qualify' :
+                      team.recentForm[i] === 'D' ? 'bg-yellow-500' : 'bg-red-500'
+                    }`} />
+                    {r}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Championship probability */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <h3 className="font-bold text-gray-900 mb-3">🏆 夺冠概率对比</h3>
+              <div className="space-y-1.5">
                 {topOdds.slice(0, 5).map((item, idx) => {
                   const t = getTeam(item.teamId);
                   if (!t) return null;
                   const isCurrent = item.teamId === team.id;
                   const prob = Math.round((1 / item.odds['Bet365']) * 100);
                   const maxProb = Math.round((1 / topOdds[0].odds['Bet365']) * 100);
-                  const barW = Math.max(4, (prob / maxProb) * 100);
-
+                  const barW = Math.max(3, (prob / maxProb) * 100);
                   return (
                     <div
                       key={item.teamId}
-                      className={`flex items-center gap-2 text-sm rounded-lg px-3 py-2 ${
+                      className={`flex items-center gap-2 text-xs rounded px-2 py-1.5 ${
                         isCurrent ? 'bg-gold-50 border border-gold' : ''
                       }`}
                     >
-                      <span className="text-xs text-gray-400 w-4 tabular-nums">{idx + 1}</span>
-                      <span className="text-lg">{t.flag}</span>
-                      <span className={`font-medium flex-1 ${isCurrent ? 'text-gold-dark' : 'text-gray-700'}`}>
+                      <span className="text-gray-400 w-4 tabular-nums">{idx + 1}</span>
+                      <span className="text-base">{t.flag}</span>
+                      <span className={`font-medium flex-1 truncate ${isCurrent ? 'text-gold-dark' : 'text-gray-700'}`}>
                         {t.name}
-                        {isCurrent && <span className="text-xs ml-1">◀</span>}
                       </span>
-                      <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            idx === 0 ? 'bg-gold' : isCurrent ? 'bg-navy' : 'bg-gray-300'
-                          }`}
-                          style={{ width: `${barW}%` }}
-                        />
+                      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${idx === 0 ? 'bg-gold' : isCurrent ? 'bg-navy' : 'bg-gray-300'}`} style={{ width: `${barW}%` }} />
                       </div>
-                      <span className="text-xs font-semibold text-gray-500 w-10 text-right tabular-nums">
-                        {prob}%
-                      </span>
+                      <span className="font-semibold text-gray-500 w-10 text-right tabular-nums">{prob}%</span>
                     </div>
                   );
                 })}
               </div>
-              <Link href="/odds" className="block mt-3 text-xs text-gold-dark hover:underline">
-                查看完整赔率分析 →
-              </Link>
             </div>
           </div>
 
-          {/* Right column: Matches + Players */}
-          <div className="lg:col-span-2 space-y-8">
+          {/* Right: Schedule + Predictions */}
+          <div className="space-y-6">
             {/* Group stage matches */}
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-4">📅 {team.group}组赛程</h2>
               {matches.length > 0 ? (
-                <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
                   {matches.map(m => {
                     const h = getTeam(m.homeTeamId);
                     const a = getTeam(m.awayTeamId);
-                    const dateStr = `${m.date.slice(5)} ${m.time}`;
                     const isHome = m.homeTeamId === team.id;
                     return (
                       <Link
                         key={m.id}
                         href={`/match/${m.id}`}
-                        className="bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md hover:border-navy-600 transition-all group"
+                        className="flex items-center gap-3 bg-white rounded-lg border border-gray-100 p-3 hover:shadow-md hover:border-navy-600 transition-all group card-elevated"
                       >
-                        <div className="text-[11px] text-gray-400 mb-2 font-mono">{dateStr}</div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex flex-col items-center flex-1">
-                            <span className="text-2xl mb-0.5">{h?.flag}</span>
-                            <span className={`text-xs font-medium text-center ${isHome ? 'text-gold-dark font-bold' : 'text-gray-700'}`}>
-                              {h?.name || 'TBD'}
-                              {isHome && ' (主)'}
-                            </span>
-                          </div>
-                          <span className="text-gray-300 font-bold text-sm">VS</span>
-                          <div className="flex flex-col items-center flex-1">
-                            <span className="text-2xl mb-0.5">{a?.flag}</span>
-                            <span className={`text-xs font-medium text-center ${!isHome ? 'text-gold-dark font-bold' : 'text-gray-700'}`}>
-                              {a?.name || 'TBD'}
-                              {!isHome && ' (主)'}
-                            </span>
-                          </div>
+                        <div className="text-center shrink-0 w-14">
+                          <div className="text-xs text-gray-400 font-mono">{m.date.slice(5)}</div>
+                          <div className="text-sm font-bold text-gray-900 font-mono">{m.time}</div>
                         </div>
-                        <div className="text-[10px] text-gray-400 text-center mt-2">
-                          {m.venue} · {m.city}
+                        <div className="flex items-center gap-2 flex-1 min-w-0 justify-center">
+                          <span className="text-lg shrink-0">{h?.flag}</span>
+                          <span className={`text-xs font-medium truncate ${isHome ? 'text-gold-dark font-bold' : 'text-gray-700'}`}>
+                            {h?.name || 'TBD'}
+                          </span>
+                          <span className="text-gray-300 text-[10px] shrink-0">VS</span>
+                          <span className={`text-xs font-medium truncate ${!isHome ? 'text-gold-dark font-bold' : 'text-gray-700'}`}>
+                            {a?.name || 'TBD'}
+                          </span>
+                          <span className="text-lg shrink-0">{a?.flag}</span>
                         </div>
-                        <span className="block text-center text-gray-300 group-hover:text-gold transition-colors mt-1">→</span>
+                        <div className="text-[10px] text-gray-400 shrink-0 hidden sm:block">{m.city}</div>
+                        <span className="text-gray-300 group-hover:text-gold transition-colors shrink-0">→</span>
                       </Link>
                     );
                   })}
@@ -267,118 +279,74 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
             {/* Group predictions */}
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-4">🤖 同组对阵预测</h2>
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
                 {groupPredictions.map(({ opponent, prediction, isHome }) => {
                   const winProb = isHome ? prediction.homeWinProb : prediction.awayWinProb;
                   const drawProb = prediction.drawProb;
-                  const loseProb = 100 - winProb - drawProb;
+                  const loseProb = Math.round((100 - winProb - drawProb) * 10) / 10;
                   return (
                     <div key={opponent.id}>
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{opponent.flag}</span>
-                          <span className="text-sm font-medium text-gray-900">
-                            VS {opponent.name}
-                          </span>
+                          <span className="text-sm font-medium text-gray-900">VS {opponent.name}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-qualify font-semibold">{winProb}% 胜</span>
-                          <span className="text-gray-400">{drawProb}% 平</span>
-                          <span className="text-red-500">{loseProb}% 负</span>
+                          <span className="text-qualify font-bold tabular-nums">{winProb}% 胜</span>
+                          <span className="text-gray-400 tabular-nums">{drawProb}% 平</span>
+                          <span className="text-red-500 tabular-nums">{loseProb}% 负</span>
                         </div>
                       </div>
-                      {/* Bar: win/draw/lose */}
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
-                        <div
-                          className="h-full bg-qualify transition-all"
-                          style={{ width: `${winProb}%` }}
-                        />
-                        <div
-                          className="h-full bg-gray-300 transition-all"
-                          style={{ width: `${drawProb}%` }}
-                        />
-                        <div
-                          className="h-full bg-red-400 transition-all"
-                          style={{ width: `${loseProb}%` }}
-                        />
+                        <div className="h-full bg-qualify transition-all" style={{ width: `${Math.max(0, winProb)}%` }} />
+                        <div className="h-full bg-gray-300 transition-all" style={{ width: `${Math.max(0, drawProb)}%` }} />
+                        <div className="h-full bg-red-400 transition-all" style={{ width: `${Math.max(0, loseProb)}%` }} />
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Key players + Recent form */}
-            <div className="grid sm:grid-cols-2 gap-6">
-              {/* Key players */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <h3 className="font-bold text-gray-900 mb-3">⭐ 核心球员</h3>
-                <div className="space-y-2">
-                  {team.keyPlayers.map((p, i) => (
-                    <div
-                      key={p}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-navy text-gold-light text-sm font-bold">
-                        {i + 1}
-                      </span>
-                      <span className="font-medium text-gray-900 text-sm">{p}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent form */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <h3 className="font-bold text-gray-900 mb-3">📈 近期战绩</h3>
-                {/* Form indicators */}
-                <div className="flex items-center gap-1.5 mb-4">
-                  {team.recentForm.map((f, i) => (
-                    <span
-                      key={i}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                        f === 'W' ? 'bg-qualify-light text-qualify' :
-                        f === 'D' ? 'bg-yellow-50 text-yellow-600' :
-                        'bg-red-50 text-red-500'
-                      }`}
-                    >
-                      {f}
+      {/* ═══════ Screen 3: Players + Opponents ═══════ */}
+      <div className="max-w-6xl mx-auto px-4 pb-12">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Key players */}
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">⭐ 核心球员</h2>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <div className="space-y-2">
+                {team.keyPlayers.map((p, i) => (
+                  <div key={p} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <span className="flex items-center justify-center w-9 h-9 rounded-full bg-navy text-gold-light text-sm font-bold shrink-0">
+                      {i + 1}
                     </span>
-                  ))}
-                  <span className="text-xs text-gray-400 ml-2">近5场</span>
-                </div>
-                <div className="space-y-1.5">
-                  {team.recentResults.map((r, i) => (
-                    <div key={i} className="text-xs text-gray-600 flex items-center gap-2">
-                      <span className={`w-1 h-1 rounded-full ${
-                        team.recentForm[i] === 'W' ? 'bg-qualify' :
-                        team.recentForm[i] === 'D' ? 'bg-yellow-500' : 'bg-red-500'
-                      }`} />
-                      {r}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Group opponents */}
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-4">👥 {team.group}组对手</h2>
-              <div className="grid grid-cols-3 gap-3">
-                {groupTeams.filter(t => t.id !== team.id).map(t => (
-                  <Link
-                    key={t.id}
-                    href={`/team/${t.id}`}
-                    className="bg-white rounded-xl border border-gray-100 p-4 text-center hover:shadow-md hover:border-navy-600 transition-all group"
-                  >
-                    <span className="text-3xl block mb-2">{t.flag}</span>
-                    <div className="font-semibold text-gray-900 text-sm">{t.name}</div>
-                    <div className="text-[11px] text-gray-400">{t.nameEn}</div>
-                    <div className="text-xs text-gray-500 mt-1.5">FIFA #{t.fifaRank}</div>
-                    <span className="text-gray-300 text-xs group-hover:text-gold transition-colors mt-1 inline-block">查看详情 →</span>
-                  </Link>
+                    <span className="font-semibold text-gray-900 text-sm">{p}</span>
+                  </div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Group opponents */}
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">👥 {team.group}组对手</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {groupTeams.filter(t => t.id !== team.id).map(t => (
+                <Link
+                  key={t.id}
+                  href={`/team/${t.id}`}
+                  className="bg-white rounded-xl border border-gray-100 p-4 text-center hover:shadow-md hover:border-navy-600 transition-all group card-elevated"
+                >
+                  <span className="text-3xl block mb-2">{t.flag}</span>
+                  <div className="font-semibold text-gray-900 text-xs">{t.name}</div>
+                  <div className="text-[10px] text-gray-400">{t.nameEn}</div>
+                  <div className="text-[10px] text-gray-500 mt-1">FIFA #{t.fifaRank}</div>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

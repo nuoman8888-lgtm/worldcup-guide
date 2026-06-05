@@ -102,8 +102,9 @@ export default function SchedulePage() {
         ))}
       </div>
 
-      {/* Date Navigation */}
-      <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-hide">
+      {/* Date Navigation — horizontal scroll with fade masks */}
+      <div className="relative mb-8">
+        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <button
           onClick={() => setSelectedDate('all')}
           className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -127,6 +128,10 @@ export default function SchedulePage() {
             {formatDate(date)}
           </button>
         ))}
+        </div>
+        {/* Gradient fade masks */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-gray-50 to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-gray-50 to-transparent z-10" />
       </div>
 
       {/* Match List */}

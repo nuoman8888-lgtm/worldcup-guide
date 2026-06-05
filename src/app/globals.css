@@ -73,6 +73,16 @@ body {
   100% { background-position: 200% center; }
 }
 
+/* ── Card elevation ── */
+.card-elevated {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.card-elevated:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
+  transform: translateY(-2px);
+}
+
 /* ── Smooth transitions (reduced from global *) ── */
 a, button, .transition-all {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;

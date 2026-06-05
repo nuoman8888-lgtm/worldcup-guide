@@ -214,17 +214,17 @@ export default function BracketView() {
 
       {/* Bracket tree — horizontal scroll on mobile */}
       <div className="overflow-x-auto pb-6 scrollbar-hide">
-        <div className="flex gap-3 min-w-[900px] justify-center">
+        <div className="flex gap-1.5 min-w-[720px] justify-center">
           {displayRounds.map(roundKey => {
             const slots = bracketSlots
               .filter(s => s.round === roundKey)
               .sort((a, b) => a.matchIndex - b.matchIndex);
 
-            // Calculate spacing: each round has fewer slots, so more vertical space
             const roundCount = slots.length;
+            const isFinal = roundKey === 'final';
 
             return (
-              <div key={roundKey} className="flex-1 min-w-[120px] max-w-[180px]">
+              <div key={roundKey} className={`flex-1 ${isFinal ? 'min-w-[130px] max-w-[160px]' : 'min-w-[95px] max-w-[140px]'}`}>
                 {/* Round header */}
                 <div className="text-center mb-3">
                   <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">
@@ -254,10 +254,15 @@ export default function BracketView() {
                           winner
                             ? 'bg-gold-50 border-gold cursor-default'
                             : 'bg-white border-gray-200 hover:border-navy-600 hover:shadow cursor-pointer'
-                        } ${slot.round === 'final' ? 'ring-2 ring-gold' : ''}`}
+                        } ${slot.round === 'final' ? 'ring-2 ring-gold bg-gold-50/30 scale-105' : ''}`}
                       >
+                        {/* Final trophy icon */}
+                        {slot.round === 'final' && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg">🏆</div>
+                        )}
+
                         {/* Match info */}
-                        <div className="text-[9px] text-gray-400 font-mono mb-1">
+                        <div className={`font-mono mb-1 ${slot.round === 'final' ? 'text-[10px] font-bold text-gold-dark' : 'text-[9px] text-gray-400'}`}>
                           {slot.date} {slot.time}
                         </div>
 
@@ -266,8 +271,8 @@ export default function BracketView() {
                           <div className="text-center flex-1">
                             {feed1 ? (
                               <>
-                                <div className="text-lg">{feed1.flag}</div>
-                                <div className="text-[9px] font-medium text-gray-900 truncate">{feed1.name}</div>
+                                <div className={slot.round === 'final' ? 'text-xl' : 'text-lg'}>{feed1.flag}</div>
+                                <div className={`font-medium truncate ${slot.round === 'final' ? 'text-[10px] text-gray-900' : 'text-[9px] text-gray-900'}`}>{feed1.name}</div>
                               </>
                             ) : (
                               <div className="text-lg text-gray-300">❓</div>
@@ -279,8 +284,8 @@ export default function BracketView() {
                           <div className="text-center flex-1">
                             {feed2 ? (
                               <>
-                                <div className="text-lg">{feed2.flag}</div>
-                                <div className="text-[9px] font-medium text-gray-900 truncate">{feed2.name}</div>
+                                <div className={slot.round === 'final' ? 'text-xl' : 'text-lg'}>{feed2.flag}</div>
+                                <div className={`font-medium truncate ${slot.round === 'final' ? 'text-[10px] text-gray-900' : 'text-[9px] text-gray-900'}`}>{feed2.name}</div>
                               </>
                             ) : (
                               <div className="text-lg text-gray-300">❓</div>
@@ -290,7 +295,7 @@ export default function BracketView() {
 
                         {/* Winner indicator */}
                         {winner && (
-                          <div className="mt-1.5 text-[10px] font-bold text-gold-dark">
+                          <div className={`font-bold ${slot.round === 'final' ? 'mt-1.5 text-xs text-gold-dark' : 'mt-1.5 text-[10px] text-gold-dark'}`}>
                             → {winner.name}
                           </div>
                         )}
