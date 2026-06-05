@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+
+const isProduction = process.env.NODE_ENV === "production";
 
 export const metadata: Metadata = {
   title: "世界杯观赛指南 2026 | 赛程 · 积分榜 · 球队 · 赔率",
@@ -54,30 +57,32 @@ export default function RootLayout({
           </div>
         </footer>
 
-        {/* Schema.org Person */}
-        <script
+        {/* Schema.org structured data */}
+        <Script
+          id="schema-org"
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "世界杯观赛指南 2026",
-              "url": "https://worldcup-guide.pages.dev",
-              "author": {
-                "@type": "Person",
-                "name": "诺曼"
-              },
-              "description": "2026美加墨世界杯观赛指南 - 今日比赛、完整赛程、48支球队数据"
-            })
-          }}
-        />
+          strategy="afterInteractive"
+        >
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "世界杯观赛指南 2026",
+            url: "https://worldcup-guide.pages.dev",
+            author: { "@type": "Person", name: "诺曼" },
+            description: "2026美加墨世界杯观赛指南 - 今日比赛、完整赛程、48支球队数据",
+          })}
+        </Script>
 
-        {/* Cloudflare Web Analytics */}
-        <script
-          defer
-          src="https://static.cloudflareinsights.com/beacon.min.js"
-          data-cf-beacon='{"token": "CF_TOKEN_PLACEHOLDER"}'
-        />
+        {/* Cloudflare Web Analytics — production only */}
+        {isProduction && (
+          <Script
+            id="cf-analytics"
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon='{"token": "CF_TOKEN_PLACEHOLDER"}'
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );
