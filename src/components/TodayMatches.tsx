@@ -6,10 +6,6 @@ import { allMatches, formatDate } from '@/data/matches';
 import { getTeam } from '@/data/teams';
 import type { Match } from '@/data/matches';
 
-/**
- * Get current date string in Beijing time (Asia/Shanghai).
- * Uses Intl API for reliable timezone handling.
- */
 function getBeijingToday(): string {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Shanghai',
@@ -20,24 +16,18 @@ function getBeijingToday(): string {
   return formatter.format(new Date());
 }
 
-/**
- * Days between two date strings (YYYY-MM-DD).
- */
 function daysBetween(a: string, b: string): number {
   const da = new Date(a + 'T00:00:00+08:00');
   const db = new Date(b + 'T00:00:00+08:00');
   return Math.ceil((db.getTime() - da.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-/**
- * Classify match time for Chinese fans.
- */
 function getTimeTag(time: string): { label: string; className: string } {
   const hour = parseInt(time.split(':')[0], 10);
-  if (hour >= 18 && hour <= 23) return { label: '黄金', className: 'bg-green-100 text-green-700' };
-  if (hour >= 9 && hour <= 17) return { label: '上午', className: 'bg-blue-100 text-blue-700' };
-  if (hour >= 0 && hour <= 2) return { label: '深夜', className: 'bg-yellow-100 text-yellow-700' };
-  return { label: '凌晨', className: 'bg-red-100 text-red-700' };
+  if (hour >= 18 && hour <= 23) return { label: '黄金', className: 'bg-green-100 text-green-700 border-green-200' };
+  if (hour >= 9 && hour <= 17) return { label: '上午', className: 'bg-blue-100 text-blue-700 border-blue-200' };
+  if (hour >= 0 && hour <= 2) return { label: '深夜', className: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+  return { label: '凌晨', className: 'bg-red-100 text-red-700 border-red-200' };
 }
 
 export default function TodayMatches() {
@@ -54,7 +44,6 @@ export default function TodayMatches() {
     const matches = allMatches.filter(m => m.date === today);
     setTodayMatches(matches);
 
-    // Upcoming dates that have matches (next 10 days)
     const allDates = [...new Set(allMatches.map(m => m.date))].sort();
     const upcoming = allDates.filter(d => d >= today).slice(0, 10);
     setNearbyDates(upcoming);
@@ -62,48 +51,46 @@ export default function TodayMatches() {
     setMounted(true);
   }, [today]);
 
-  // ---- Pre-tournament state ----
+  // ── SSR placeholder ──
   if (!mounted) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-48 mx-auto mb-4" />
-          <div className="h-4 bg-gray-100 rounded w-64 mx-auto" />
+        <div className="animate-pulse space-y-3">
+          <div className="h-6 bg-gray-200 rounded w-48 mx-auto" />
+          <div className="h-4 bg-gray-100 rounded w-32 mx-auto" />
         </div>
       </div>
     );
   }
 
+  // ── Pre-tournament: countdown + opening day preview ──
   if (!tournamentStarted) {
-    const openingDate = '2026-06-12';
-    const openingMatches = allMatches.filter(m => m.date === openingDate && m.stage === 'group');
-    const daysLeft = daysBetween(today, openingDate);
+    const openingMatches = allMatches.filter(m => m.date === '2026-06-12' && m.stage === 'group');
+    const daysLeft = daysBetween(today, '2026-06-12');
 
     return (
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-700 to-emerald-600 px-5 py-4 md:px-6 md:py-5 text-white">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-green-700 to-emerald-600 px-6 py-5 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold">⏳ 等待开赛</h2>
-              <p className="text-green-100 text-xs md:text-sm mt-0.5">
-                2026年6月12日 · 美国 / 加拿大 / 墨西哥
-              </p>
+              <h2 className="text-lg font-bold">📅 开幕日倒计时</h2>
+              <p className="text-green-100 text-sm mt-0.5">6月12日 星期五 · 墨西哥城 Azteca 球场</p>
             </div>
             <div className="text-right shrink-0 ml-4">
-              <div className="text-3xl md:text-4xl font-extrabold tabular-nums">{Math.max(0, daysLeft)}</div>
+              <div className="text-4xl font-extrabold tabular-nums">{Math.max(0, daysLeft)}</div>
               <div className="text-xs text-green-200">天后开幕</div>
             </div>
           </div>
         </div>
 
-        {/* Opening day preview */}
-        <div className="p-4 md:p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm font-semibold text-gray-900">📅 开幕日比赛</span>
-            <span className="text-xs text-gray-400">6月12日 周五</span>
+        {/* Opening matches */}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-base">🔥</span>
+            <span className="font-semibold text-gray-900">开幕日焦点战</span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {openingMatches.map(m => {
               const h = getTeam(m.homeTeamId);
               const a = getTeam(m.awayTeamId);
@@ -112,57 +99,91 @@ export default function TodayMatches() {
                 <Link
                   key={m.id}
                   href={`/match/${m.id}`}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
+                  className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-green-300 hover:shadow-md transition-all bg-white group"
                 >
-                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${tag.className}`}>
-                    {tag.label}
-                  </span>
-                  <span className="text-sm font-mono text-gray-500 w-12 shrink-0">{m.time}</span>
-                  <span className="text-xl shrink-0">{h?.flag}</span>
-                  <span className="font-medium text-gray-900 text-sm truncate">{h?.name}</span>
-                  <span className="text-gray-300 text-xs font-bold shrink-0">VS</span>
-                  <span className="font-medium text-gray-900 text-sm truncate">{a?.name}</span>
-                  <span className="text-xl shrink-0">{a?.flag}</span>
-                  <span className="text-xs text-gray-400 ml-auto hidden sm:block shrink-0">{m.city}</span>
+                  {/* Time block */}
+                  <div className="text-center shrink-0 w-14">
+                    <div className="text-lg font-bold text-gray-900">{m.time}</div>
+                    <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-1 border ${tag.className}`}>
+                      {tag.label}
+                    </span>
+                  </div>
+
+                  {/* Teams */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex flex-col items-center shrink-0">
+                      <span className="text-3xl">{h?.flag}</span>
+                      <span className="font-semibold text-gray-900 text-sm mt-0.5">{h?.name}</span>
+                    </div>
+
+                    <div className="flex-1 text-center">
+                      <span className="text-xl font-extrabold text-gray-300">VS</span>
+                    </div>
+
+                    <div className="flex flex-col items-center shrink-0">
+                      <span className="text-3xl">{a?.flag}</span>
+                      <span className="font-semibold text-gray-900 text-sm mt-0.5">{a?.name}</span>
+                    </div>
+                  </div>
+
+                  {/* Venue */}
+                  <div className="text-right shrink-0 hidden md:block">
+                    <div className="text-sm font-medium text-gray-700">{m.city}</div>
+                    <div className="text-xs text-gray-400">{m.venue}</div>
+                  </div>
+
+                  {/* Arrow */}
+                  <span className="text-gray-300 group-hover:text-green-500 transition-colors text-lg shrink-0">→</span>
                 </Link>
               );
             })}
           </div>
+
           <Link
             href="/schedule"
-            className="inline-flex items-center gap-1 mt-4 text-sm text-green-700 hover:text-green-800 font-medium transition-colors"
+            className="inline-flex items-center gap-1 mt-5 text-sm text-green-700 hover:text-green-800 font-semibold transition-colors"
           >
-            📅 查看完整赛程（104场） →
+            📅 查看全部104场比赛 →
           </Link>
         </div>
       </div>
     );
   }
 
-  // ---- Tournament started ----
+  // ── Tournament started ──
   const hasLive = todayMatches.some(m => m.status === 'live');
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
       {/* Header */}
-      <div className={`px-5 py-3 md:px-6 md:py-4 text-white flex items-center justify-between ${
-        hasLive ? 'bg-red-600 animate-pulse' : 'bg-gradient-to-r from-gray-900 to-gray-800'
-      }`}>
-        <h2 className="text-lg font-bold">
-          {hasLive ? '⚡ 比赛进行中' : `📅 ${formatDate(today)}`}
-          {todayMatches.length > 0 && (
-            <span className="ml-2 text-sm font-normal opacity-70">{todayMatches.length}场</span>
+      <div
+        className={`px-6 py-4 text-white flex items-center justify-between ${
+          hasLive
+            ? 'bg-red-600'
+            : 'bg-gradient-to-r from-gray-900 to-gray-800'
+        }`}
+      >
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          {hasLive ? (
+            <>
+              <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
+              ⚡ 比赛进行中
+            </>
+          ) : (
+            <>📅 {formatDate(today)}</>
           )}
+          <span className="text-sm font-normal opacity-60">
+            {todayMatches.length}场
+          </span>
         </h2>
         <Link href="/schedule" className="text-sm opacity-80 hover:opacity-100 hover:underline transition-opacity">
           完整赛程 →
         </Link>
       </div>
 
-      {/* Match list or empty state */}
       <div className="p-4 md:p-5">
         {todayMatches.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {todayMatches.map(m => {
               const h = getTeam(m.homeTeamId);
               const a = getTeam(m.awayTeamId);
@@ -174,80 +195,103 @@ export default function TodayMatches() {
                 <Link
                   key={m.id}
                   href={`/match/${m.id}`}
-                  className={`flex items-center gap-3 p-4 rounded-lg transition-all border ${
+                  className={`flex items-center gap-4 p-4 rounded-xl border transition-all group ${
                     isLive
-                      ? 'bg-red-50 border-red-200 hover:border-red-300'
-                      : 'border-gray-100 hover:border-green-200 hover:shadow-sm'
+                      ? 'bg-red-50 border-red-200 hover:border-red-300 hover:shadow-md'
+                      : isFinished
+                      ? 'bg-gray-50 border-gray-100 hover:border-gray-200'
+                      : 'border-gray-100 hover:border-green-300 hover:shadow-md bg-white'
                   }`}
                 >
-                  {/* Time tag */}
-                  {isLive ? (
-                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-red-500 text-white animate-pulse shrink-0">
-                      LIVE
-                    </span>
-                  ) : isFinished ? (
-                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-gray-100 text-gray-500 shrink-0">
-                      完赛
-                    </span>
-                  ) : (
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${tag.className}`}>
-                      {tag.label}
-                    </span>
-                  )}
-
-                  {/* Time */}
-                  <span className="text-sm font-mono text-gray-500 w-12 shrink-0">{m.time}</span>
-
-                  {/* Teams + score */}
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-xl shrink-0">{h?.flag || '❓'}</span>
-                    <span className="font-semibold text-gray-900 text-sm truncate">
-                      {h?.name || '待定'}
-                    </span>
-
-                    {isLive || isFinished ? (
-                      <span className={`text-lg font-bold shrink-0 ${isLive ? 'text-red-600' : 'text-gray-900'}`}>
-                        {m.homeScore ?? 0} - {m.awayScore ?? 0}
+                  {/* Time block */}
+                  <div className="text-center shrink-0 w-14">
+                    <div className="text-lg font-bold text-gray-900">{m.time}</div>
+                    {isLive ? (
+                      <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-500 text-white animate-pulse mt-1">
+                        LIVE
+                      </span>
+                    ) : isFinished ? (
+                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-200 text-gray-500 mt-1">
+                        完赛
                       </span>
                     ) : (
-                      <span className="text-gray-300 text-xs font-bold shrink-0">VS</span>
+                      <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-1 border ${tag.className}`}>
+                        {tag.label}
+                      </span>
                     )}
-
-                    <span className="font-semibold text-gray-900 text-sm truncate">
-                      {a?.name || '待定'}
-                    </span>
-                    <span className="text-xl shrink-0">{a?.flag || '❓'}</span>
                   </div>
 
-                  {/* Venue (desktop only) */}
-                  <div className="text-xs text-gray-400 text-right hidden md:block shrink-0">
-                    <div>{m.city}</div>
-                    <div className="text-gray-300 text-[10px]">{m.venue}</div>
+                  {/* Teams + score */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {/* Home */}
+                    <div className="flex flex-col items-center shrink-0">
+                      <span className="text-3xl">{h?.flag || '❓'}</span>
+                      <span className="font-semibold text-gray-900 text-sm mt-0.5 text-center leading-tight">
+                        {h?.name || '待定'}
+                      </span>
+                    </div>
+
+                    {/* Score / VS */}
+                    <div className="flex-1 text-center">
+                      {isLive ? (
+                        <div>
+                          <span className="text-2xl font-extrabold text-red-600 animate-pulse tabular-nums">
+                            {m.homeScore ?? 0} - {m.awayScore ?? 0}
+                          </span>
+                          <div className="text-[11px] text-red-500 font-medium mt-0.5">进行中</div>
+                        </div>
+                      ) : isFinished ? (
+                        <div>
+                          <span className="text-2xl font-extrabold text-gray-900 tabular-nums">
+                            {m.homeScore} - {m.awayScore}
+                          </span>
+                          <div className="text-[11px] text-gray-400 mt-0.5">已结束</div>
+                        </div>
+                      ) : (
+                        <span className="text-xl font-extrabold text-gray-300">VS</span>
+                      )}
+                    </div>
+
+                    {/* Away */}
+                    <div className="flex flex-col items-center shrink-0">
+                      <span className="text-3xl">{a?.flag || '❓'}</span>
+                      <span className="font-semibold text-gray-900 text-sm mt-0.5 text-center leading-tight">
+                        {a?.name || '待定'}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Venue (desktop) */}
+                  <div className="text-right shrink-0 hidden md:block">
+                    <div className="text-sm font-medium text-gray-700">{m.city}</div>
+                    <div className="text-xs text-gray-400">{m.venue}</div>
+                  </div>
+
+                  <span className="text-gray-300 group-hover:text-green-500 transition-colors text-lg shrink-0">→</span>
                 </Link>
               );
             })}
           </div>
         ) : (
-          <div className="text-center py-10">
-            <div className="text-4xl mb-3">⚽</div>
-            <p className="text-gray-600 font-medium">今天没有比赛</p>
-            <p className="text-sm text-gray-400 mt-1">
+          <div className="text-center py-12">
+            <div className="text-5xl mb-4">⚽</div>
+            <p className="text-gray-700 font-semibold text-lg">今天没有比赛</p>
+            <p className="text-gray-400 text-sm mt-1">
               最近比赛日：{nearbyDates.slice(0, 3).map(d => formatDate(d)).join(' · ')}
             </p>
             <Link
               href="/schedule"
-              className="inline-block mt-4 px-5 py-2.5 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
+              className="inline-block mt-5 px-6 py-3 bg-green-700 text-white rounded-xl text-sm font-bold hover:bg-green-800 transition-colors shadow-md hover:shadow-lg"
             >
-              浏览完整赛程
+              📅 浏览完整赛程
             </Link>
           </div>
         )}
 
-        {/* Date quick-jump pills */}
+        {/* Date quick-jump */}
         {nearbyDates.length > 1 && (
           <div className="mt-5 pt-4 border-t border-gray-100">
-            <div className="text-xs text-gray-400 mb-2 font-medium">快速跳转日期</div>
+            <div className="text-xs text-gray-400 mb-2 font-medium">快速跳转</div>
             <div className="flex gap-1.5 flex-wrap">
               {nearbyDates.slice(0, 8).map(d => {
                 const isToday = d === today;
@@ -255,7 +299,7 @@ export default function TodayMatches() {
                   <Link
                     key={d}
                     href={`/schedule`}
-                    className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
+                    className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
                       isToday
                         ? 'bg-green-700 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
