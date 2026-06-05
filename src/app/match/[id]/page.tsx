@@ -124,7 +124,7 @@ export default async function MatchPage({
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span>🤖</span> AI预测分析
               <span className={`text-xs px-2 py-0.5 rounded ml-auto ${
-                prediction.confidence === 'high' ? 'bg-green-100 text-green-800' :
+                prediction.confidence === 'high' ? 'bg-qualify-light text-qualify' :
                 prediction.confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                 'bg-gray-100 text-gray-600'
               }`}>
@@ -133,9 +133,9 @@ export default async function MatchPage({
             </h3>
 
             <div className="grid grid-cols-3 gap-3 mb-5">
-              <div className="bg-green-50 rounded-lg p-3 text-center">
+              <div className="bg-qualify-light rounded-lg p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">{homeTeam?.name}胜</div>
-                <div className="text-2xl font-bold text-green-700">{prediction.homeWinProb}%</div>
+                <div className="text-2xl font-bold text-qualify">{prediction.homeWinProb}%</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">平局</div>
@@ -155,7 +155,7 @@ export default async function MatchPage({
             <div className="space-y-2">
               {prediction.factors.map((f, i) => (
                 <div key={i} className={`text-xs flex items-start gap-1.5 ${
-                  f.impact === 'positive' ? 'text-green-700' : f.impact === 'negative' ? 'text-red-600' : 'text-gray-500'
+                  f.impact === 'positive' ? 'text-qualify' : f.impact === 'negative' ? 'text-red-600' : 'text-gray-500'
                 }`}>
                   <span>{f.impact === 'positive' ? '✅' : f.impact === 'negative' ? '⚠️' : 'ℹ️'}</span>
                   <span><strong>{f.label}:</strong> {f.detail}</span>

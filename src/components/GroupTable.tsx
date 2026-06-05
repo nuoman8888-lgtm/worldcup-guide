@@ -1,27 +1,35 @@
+import Link from 'next/link';
 import { getTeam } from '@/data/teams';
 import type { GroupStandings } from '@/data/standings';
-import TeamBadge from './TeamBadge';
 
 export default function GroupTable({ data, compact = false }: { data: GroupStandings; compact?: boolean }) {
   if (compact) {
     return (
       <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
-        <div className="bg-gray-900 text-white px-3 py-2 font-bold text-sm">
+        <div className="bg-navy text-white px-3 py-2 font-bold text-sm">
           {data.groupName} 组
         </div>
         <div className="divide-y divide-gray-50">
           {data.standings.map((row, i) => {
             const team = getTeam(row.teamId);
+            const isQualify = i < 2;
+            const isPlayoff = i === 2;
             return (
-              <div key={row.teamId} className={`flex items-center justify-between px-3 py-2 ${i < 2 ? 'bg-green-50/50' : ''}`}>
+              <div
+                key={row.teamId}
+                className={`flex items-center justify-between px-3 py-2 ${
+                  isQualify ? 'bg-qualify-light border-l-2 border-qualify' :
+                  isPlayoff ? 'bg-playoff-light border-l-2 border-playoff' : ''
+                }`}
+              >
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400 w-4">{i + 1}</span>
+                  <span className="text-xs text-gray-400 w-4 tabular-nums">{i + 1}</span>
                   {team && <span className="text-lg">{team.flag}</span>}
                   <span className="text-sm font-medium text-gray-900">{team?.name || row.teamId}</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <span>{row.played}场</span>
-                  <span className="font-semibold text-gray-900">{row.points}分</span>
+                  <span className="font-semibold text-gray-900 tabular-nums">{row.points}分</span>
                 </div>
               </div>
             );
@@ -31,57 +39,102 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
     );
   }
 
+  // Full table
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-      <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-4 py-3">
-        <h3 className="font-bold text-lg">{data.groupName} 组</h3>
-        <p className="text-xs text-gray-400 mt-0.5">前两名直接晋级，小组第三仍有机会</p>
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="bg-navy px-5 py-3 text-white">
+        <h3 className="font-bold text-base">{data.groupName} 组</h3>
+        <p className="text-xs text-gray-400 mt-0.5">前两名直接晋级32强，第3名仍有机会</p>
       </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 text-gray-500 text-xs">
-              <th className="text-left px-4 py-2 font-medium">球队</th>
-              <th className="text-center px-2 py-2 font-medium">场</th>
-              <th className="text-center px-2 py-2 font-medium">胜</th>
-              <th className="text-center px-2 py-2 font-medium">平</th>
-              <th className="text-center px-2 py-2 font-medium">负</th>
-              <th className="text-center px-2 py-2 font-medium">进/失</th>
-              <th className="text-center px-2 py-2 font-medium">净胜</th>
-              <th className="text-center px-4 py-2 font-medium">分</th>
+            <tr className="border-b border-gray-100 text-xs text-gray-500">
+              <th className="text-left py-2.5 pl-5 w-8">#</th>
+              <th className="text-left py-2.5">球队</th>
+              <th className="text-center py-2.5 w-8">赛</th>
+              <th className="text-center py-2.5 w-8">胜</th>
+              <th className="text-center py-2.5 w-8">平</th>
+              <th className="text-center py-2.5 w-8">负</th>
+              <th className="text-center py-2.5 hidden sm:table-cell">进/失</th>
+              <th className="text-center py-2.5 hidden sm:table-cell w-10">净胜</th>
+              <th className="text-center py-2.5 pr-5 w-10 font-semibold">分</th>
             </tr>
           </thead>
           <tbody>
             {data.standings.map((row, i) => {
               const team = getTeam(row.teamId);
+              if (!team) return null;
+              const isQualify = i < 2;
+              const isPlayoff = i === 2;
+
               return (
-                <tr key={row.teamId} className={`border-b border-gray-50 ${i < 2 ? 'bg-green-50/30' : ''} hover:bg-gray-50 transition-colors`}>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold w-5 ${i < 2 ? 'text-green-600' : 'text-gray-400'}`}>
-                        {i + 1}
-                      </span>
-                      {team && <span className="text-xl">{team.flag}</span>}
+                <tr
+                  key={row.teamId}
+                  className={`border-b border-gray-50 transition-colors ${
+                    isQualify
+                      ? 'bg-qualify-light/60'
+                      : isPlayoff
+                      ? 'bg-playoff-light/60'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <td className="py-3 pl-5">
+                    <span
+                      className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold ${
+                        i === 0 ? 'bg-qualify text-white' :
+                        i === 1 ? 'bg-qualify text-white' :
+                        i === 2 ? 'bg-playoff text-white' : 'text-gray-400'
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                  </td>
+                  <td className="py-3">
+                    <Link
+                      href={`/team/${row.teamId}`}
+                      className="flex items-center gap-2 hover:text-gold-dark transition-colors"
+                    >
+                      <span className="text-lg">{team.flag}</span>
                       <div>
-                        <div className="font-semibold text-gray-900">{team?.name || row.teamId}</div>
-                        <div className="text-[10px] text-gray-400">{team?.nameEn || ''}</div>
+                        <div className="font-semibold text-gray-900 text-sm">{team.name}</div>
+                        <div className="text-[10px] text-gray-400">{team.nameEn}</div>
                       </div>
-                    </div>
+                    </Link>
                   </td>
-                  <td className="text-center px-2 py-3 text-gray-600">{row.played}</td>
-                  <td className="text-center px-2 py-3 text-gray-600">{row.won}</td>
-                  <td className="text-center px-2 py-3 text-gray-600">{row.drawn}</td>
-                  <td className="text-center px-2 py-3 text-gray-600">{row.lost}</td>
-                  <td className="text-center px-2 py-3 text-gray-600">{row.goalsFor}-{row.goalsAgainst}</td>
-                  <td className={`text-center px-2 py-3 font-medium ${row.goalDiff > 0 ? 'text-green-600' : row.goalDiff < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                    {row.goalDiff > 0 ? '+' : ''}{row.goalDiff}
+                  <td className="text-center py-3 text-gray-600 tabular-nums">{row.played}</td>
+                  <td className="text-center py-3 text-gray-600 tabular-nums">{row.won}</td>
+                  <td className="text-center py-3 text-gray-600 tabular-nums">{row.drawn}</td>
+                  <td className="text-center py-3 text-gray-600 tabular-nums">{row.lost}</td>
+                  <td className="text-center py-3 text-gray-500 text-xs hidden sm:table-cell tabular-nums">
+                    {row.goalsFor}-{row.goalsAgainst}
                   </td>
-                  <td className="text-center px-4 py-3 font-bold text-gray-900">{row.points}</td>
+                  <td className="text-center py-3 hidden sm:table-cell tabular-nums">
+                    <span className={`font-semibold ${row.goalDiff > 0 ? 'text-qualify' : row.goalDiff < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {row.goalDiff > 0 ? '+' : ''}{row.goalDiff}
+                    </span>
+                  </td>
+                  <td className="text-center py-3 pr-5 font-bold text-gray-900 tabular-nums">{row.points}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Legend */}
+      <div className="px-5 py-2.5 border-t border-gray-100 flex gap-4 text-[11px] text-gray-500 flex-wrap">
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-sm bg-qualify" /> 晋级32强
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-sm bg-playoff" /> 可能晋级（最佳第3名）
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-sm bg-gray-200" /> 淘汰
+        </span>
       </div>
     </div>
   );

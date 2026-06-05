@@ -23,16 +23,19 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-gray-50">
         <Navbar />
         <main className="flex-1">{children}</main>
-        <footer className="bg-gray-900 text-gray-400 py-8 mt-auto">
+        <footer className="bg-navy text-gray-400 py-10 mt-auto border-t border-navy-600">
           <div className="max-w-6xl mx-auto px-4 text-center text-sm">
-            <p className="mb-2">
-              🏆 世界杯观赛指南 2026 — 今日比赛 · 完整赛程 · 48支球队
+            <p className="mb-2 font-semibold text-white">
+              🏆 世界杯观赛指南 2026
             </p>
-            <p className="text-gray-500 text-xs">
-              数据仅供参考 | 基于ELO模型和FIFA排名 | 不构成任何投注建议
+            <p className="text-gray-400 text-xs">
+              今日比赛 · 完整赛程 · 48支球队 · 12个小组
             </p>
-            <p className="text-gray-600 text-xs mt-3">
-              Built with Next.js · Deployed on Vercel · © 2026
+            <p className="text-gray-500 text-xs mt-3">
+              数据仅供参考 · 基于ELO模型和FIFA排名 · 不构成任何投注建议
+            </p>
+            <p className="text-gray-600 text-[10px] mt-4">
+              Built with Next.js · Deployed on Cloudflare Pages · © 2026
             </p>
           </div>
         </footer>

@@ -55,7 +55,7 @@ export default function SchedulePage() {
             onClick={() => { setSelectedStage(stage.value); setSelectedDate('all'); }}
             className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               selectedStage === stage.value
-                ? 'bg-green-700 text-white shadow-md'
+                ? 'bg-navy text-white shadow-md'
                 : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
             }`}
           >

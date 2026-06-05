@@ -1,13 +1,42 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════
+   World Cup Guide 2026 — Color System
+   Deep Navy + White + Gold
+   ═══════════════════════════════════════════════ */
+
 @theme inline {
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* ── Brand ── */
+  --color-navy: #0F1B2D;
+  --color-navy-light: #1A2740;
+  --color-navy-800: #162032;
+  --color-navy-700: #1A2740;
+  --color-navy-600: #243450;
+
+  /* ── Gold accent ── */
+  --color-gold: #C8A951;
+  --color-gold-dark: #A88A3D;
+  --color-gold-light: #F5E6B8;
+  --color-gold-50: #FDF9EF;
+
+  /* ── Functional ── */
+  --color-live: #DC2626;
+  --color-qualify: #059669;
+  --color-qualify-light: #ECFDF5;
+  --color-playoff: #3B82F6;
+  --color-playoff-light: #EFF6FF;
+  --color-eliminated: #9CA3AF;
 }
 
+/* ── Base ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F3F4F6;
+  --foreground: #1F2937;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,7 +52,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Scrollbar hiding utility */
+/* ── Scrollbar hide ── */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -32,14 +61,20 @@ body {
   display: none;
 }
 
-/* Animation for live pulse */
+/* ── Live pulse animation ── */
 @keyframes pulse-live {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 
-/* Smooth transitions */
-* {
+/* ── Gold shimmer for champion elements ── */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ── Smooth transitions (reduced from global *) ── */
+a, button, .transition-all {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;

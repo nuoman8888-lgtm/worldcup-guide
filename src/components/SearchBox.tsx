@@ -31,7 +31,6 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
       .slice(0, 8);
   }, [query, teams]);
 
-  // Close on Escape, navigate with arrow keys
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -61,7 +60,6 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
     return () => document.removeEventListener('keydown', handler);
   }, [open, results, activeIndex]);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -73,7 +71,6 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Reset active index when results change
   useEffect(() => {
     setActiveIndex(-1);
   }, [results]);
@@ -82,19 +79,18 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
   const showDropdown = open && query.trim().length > 0;
 
   const inputClasses = isNavbar
-    ? 'w-36 lg:w-48 pl-8 pr-3 py-1.5 text-sm rounded-lg bg-white/10 backdrop-blur border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15'
-    : 'w-full max-w-xl mx-auto pl-12 pr-12 py-4 text-lg rounded-2xl border-2 border-white/40 bg-white/20 backdrop-blur text-white placeholder-white/50 shadow-2xl shadow-green-900/30 focus:outline-none focus:ring-4 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white/25 transition-all';
+    ? 'w-36 lg:w-48 pl-8 pr-3 py-1.5 text-sm rounded-lg bg-navy-light border border-navy-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gold focus:border-gold'
+    : 'w-full max-w-xl mx-auto pl-12 pr-12 py-4 text-lg rounded-2xl border-2 border-navy-600 bg-navy-light text-white placeholder-gray-400 shadow-2xl shadow-black/30 focus:outline-none focus:ring-4 focus:ring-gold/30 focus:border-gold transition-all';
 
   return (
     <div ref={containerRef} className="relative">
       <div className={isNavbar ? '' : 'flex justify-center'}>
         <div className="relative" style={isNavbar ? {} : { width: '100%', maxWidth: '36rem' }}>
-          {/* Search icon */}
           <svg
             className={`absolute top-1/2 -translate-y-1/2 pointer-events-none ${
               isNavbar
-                ? 'left-2.5 w-4 h-4 text-white/50'
-                : 'left-5 w-6 h-6 text-white/60'
+                ? 'left-2.5 w-4 h-4 text-gray-500'
+                : 'left-5 w-6 h-6 text-gray-400'
             }`}
             fill="none"
             stroke="currentColor"
@@ -114,11 +110,10 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
             onFocus={() => {
               if (query.trim()) setOpen(true);
             }}
-            placeholder={isNavbar ? '搜索球队' : '搜索你关注的球队，例如：巴西、日本、England...'}
+            placeholder={isNavbar ? '搜索球队' : '搜索你关注的球队...'}
             className={inputClasses}
           />
 
-          {/* Clear button */}
           {query && (
             <button
               onClick={() => {
@@ -126,8 +121,8 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                 setOpen(false);
                 inputRef.current?.focus();
               }}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 ${
-                isNavbar ? 'text-white/50' : 'right-3 text-white/50'
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-navy-600 transition-colors ${
+                isNavbar ? 'text-gray-500' : 'right-3 text-gray-400'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,12 +133,10 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
         </div>
       </div>
 
-      {/* Dropdown results */}
+      {/* Dropdown */}
       {showDropdown && (
         <>
-          {/* Mobile backdrop */}
           <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} />
-
           <div
             className={`absolute z-50 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden ${
               isNavbar
@@ -168,7 +161,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                         setQuery('');
                       }}
                       className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${
-                        idx === activeIndex ? 'bg-green-50' : ''
+                        idx === activeIndex ? 'bg-gold-50' : ''
                       }`}
                     >
                       <span className="text-2xl shrink-0">{team.flag}</span>
@@ -181,11 +174,8 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                           {team.group}组 · FIFA #{team.fifaRank} · ELO {team.elo}
                         </div>
                         {upcoming && (
-                          <div className="text-xs text-green-600 mt-0.5 font-medium">
-                            📅 下场: {upcoming.date} {upcoming.time} vs{' '}
-                            {upcoming.homeTeamId === team.id
-                              ? upcoming.awayTeamId
-                              : upcoming.homeTeamId}
+                          <div className="text-xs text-gold-dark mt-0.5 font-medium">
+                            📅 下场: {upcoming.date} {upcoming.time}
                           </div>
                         )}
                       </div>

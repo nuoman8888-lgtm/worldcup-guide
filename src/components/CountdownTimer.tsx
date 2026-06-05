@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { worldCupCountdown } from '@/lib/utils';
 
+/**
+ * Compact countdown — single row instead of 4 large blocks.
+ * Used in the homepage status bar.
+ */
 export default function CountdownTimer() {
   const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [mounted, setMounted] = useState(false);
@@ -17,42 +21,42 @@ export default function CountdownTimer() {
 
   if (!mounted) {
     return (
-      <div className="grid grid-cols-4 gap-3 text-center">
-        {['天', '时', '分', '秒'].map(label => (
-          <div key={label} className="bg-white/10 backdrop-blur rounded-xl p-4 min-w-[70px]">
-            <div className="text-3xl font-bold text-white">--</div>
-            <div className="text-xs text-white/60 mt-1">{label}</div>
-          </div>
-        ))}
+      <div className="inline-flex items-center gap-3 text-white/70 text-sm">
+        <span className="font-mono tabular-nums">--</span>天
+        <span className="font-mono tabular-nums">--</span>时
+        <span className="font-mono tabular-nums">--</span>分
       </div>
     );
   }
 
-  const items = [
-    { value: time.days, label: '天' },
-    { value: time.hours, label: '时' },
-    { value: time.minutes, label: '分' },
-    { value: time.seconds, label: '秒' },
-  ];
-
-  if (time.days === 0 && time.hours === 0 && time.minutes === 0 && time.seconds === 0) {
+  const total = time.days + time.hours + time.minutes + time.seconds;
+  if (total === 0) {
     return (
-      <div className="text-center text-white">
-        <div className="text-4xl font-bold animate-pulse">🏆 世界杯已开幕！</div>
-      </div>
+      <span className="inline-flex items-center gap-1.5 text-gold font-bold text-sm animate-pulse">
+        <span className="w-1.5 h-1.5 bg-gold rounded-full" />
+        世界杯已开幕
+      </span>
     );
   }
 
   return (
-    <div className="grid grid-cols-4 gap-3 text-center">
-      {items.map(item => (
-        <div key={item.label} className="bg-white/10 backdrop-blur rounded-xl p-4 min-w-[70px]">
-          <div className="text-3xl font-bold text-white tabular-nums">
-            {String(item.value).padStart(2, '0')}
-          </div>
-          <div className="text-xs text-white/60 mt-1">{item.label}</div>
-        </div>
-      ))}
+    <div className="inline-flex items-center gap-1 text-white text-sm font-semibold">
+      <span className="font-mono tabular-nums text-base">{time.days}</span>
+      <span className="text-white/60 text-xs">天</span>
+      <span className="text-white/30 mx-0.5">·</span>
+      <span className="font-mono tabular-nums">{String(time.hours).padStart(2, '0')}</span>
+      <span className="text-white/60 text-xs">时</span>
+      <span className="text-white/30 mx-0.5">·</span>
+      <span className="font-mono tabular-nums">{String(time.minutes).padStart(2, '0')}</span>
+      <span className="text-white/60 text-xs">分</span>
+      {/* Only show seconds on mobile or when < 1 hour remains */}
+      {time.days === 0 && time.hours < 2 && (
+        <>
+          <span className="text-white/30 mx-0.5">·</span>
+          <span className="font-mono tabular-nums">{String(time.seconds).padStart(2, '0')}</span>
+          <span className="text-white/60 text-xs">秒</span>
+        </>
+      )}
     </div>
   );
 }

@@ -1,149 +1,168 @@
 import Link from 'next/link';
-import SearchBox from '@/components/SearchBox';
-import TodayMatches from '@/components/TodayMatches';
-import CountdownTimer from '@/components/CountdownTimer';
+import { CountdownBar } from '@/components/CountdownBar';
+import { TodayFocus } from '@/components/TodayFocus';
+import { ChampionFavorites } from '@/components/ChampionFavorites';
 import { getSimulatedStandings } from '@/data/standings';
 import { getTeam } from '@/data/teams';
+import { getChampionOdds } from '@/data/odds';
+import { getUpcomingMatches } from '@/data/matches';
 
-const hotTeamIds = [
-  'argentina', 'brazil', 'france', 'germany',
-  'england', 'spain', 'portugal', 'netherlands',
-  'japan', 'south-korea',
-];
-
+// ── Homepage: compact above-fold, dual-column, match-first ──
 export default function HomePage() {
+  const champOdds = getChampionOdds().slice(0, 8);
+  const upcoming = getUpcomingMatches().slice(0, 6);
+
   return (
     <div className="min-h-screen">
-      {/* ═══════════════════════════════════════════
-          HERO — 视觉冲击 + 搜索优先
-          ═══════════════════════════════════════════ */}
-      <section className="relative bg-gradient-to-br from-green-800 via-green-700 to-emerald-600 text-white overflow-hidden">
-        {/* Floating emoji background */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute top-10 left-10 text-9xl select-none">⚽</div>
-          <div className="absolute bottom-10 right-10 text-9xl select-none">🏟️</div>
-          <div className="absolute top-1/3 right-1/4 text-8xl select-none">🏆</div>
-          <div className="absolute bottom-1/4 left-1/4 text-7xl select-none">🌟</div>
+      {/* ═══════════ Status bar — compact ═══════════ */}
+      <section className="bg-navy border-b border-navy-600">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <CountdownBar />
         </div>
+      </section>
 
-        <div className="relative max-w-3xl mx-auto px-4 py-16 md:py-24 text-center">
-          {/* Animated badge */}
-          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-1.5 text-sm mb-6">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span>2026 FIFA World Cup · 6月12日 - 7月20日 · 美国/加拿大/墨西哥</span>
+      {/* ═══════════ Main: dual-column ═══════════ */}
+      <section className="max-w-6xl mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-5 gap-6">
+          {/* Left: focus matches (3/5) */}
+          <div className="lg:col-span-3">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">📅 焦点比赛</h2>
+              <Link href="/schedule" className="text-sm text-gold-dark hover:underline font-medium">
+                完整赛程 →
+              </Link>
+            </div>
+            <TodayFocus />
           </div>
 
-          {/* Big title */}
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-3 tracking-tight">
-            🏆 世界杯观赛指南
-          </h1>
-          <p className="text-lg md:text-xl text-green-100 mb-10">
-            48支球队 · 104场比赛 · 全方位数据平台
-          </p>
-
-          {/* ── Countdown: 制造紧迫感，放在上面 ── */}
-          <div className="mb-3">
-            <p className="text-green-200 text-sm mb-3 font-medium">距离世界杯揭幕战</p>
-            <CountdownTimer />
+          {/* Right: champion favorites (2/5) */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">🏆 冠军热门</h2>
+              <Link href="/odds" className="text-sm text-gold-dark hover:underline font-medium">
+                完整赔率 →
+              </Link>
+            </div>
+            <ChampionFavorites teams={champOdds} />
           </div>
+        </div>
+      </section>
 
-          {/* ── Search: 核心交互 ── */}
-          <div className="mt-8 mb-5">
-            <p className="text-green-200 text-sm mb-3 font-medium">搜索你关注的比赛</p>
-            <SearchBox variant="hero" />
+      {/* ═══════════ Upcoming matches ═══════════ */}
+      {upcoming.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900">📅 即将到来</h2>
+            <Link href="/schedule" className="text-sm text-gold-dark hover:underline font-medium">
+              全部 →
+            </Link>
           </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {upcoming.map(m => {
+              const h = getTeam(m.homeTeamId);
+              const a = getTeam(m.awayTeamId);
+              const hour = parseInt(m.time.split(':')[0], 10);
+              const tag = hour >= 18 && hour <= 23 ? '🟢' : hour >= 9 && hour <= 17 ? '🔵' : hour >= 0 && hour <= 2 ? '🟡' : '🔴';
 
-          {/* Hot teams */}
-          <div className="flex justify-center gap-1.5 flex-wrap mb-8">
-            {hotTeamIds.map(id => {
-              const team = getTeam(id);
-              if (!team) return null;
               return (
                 <Link
-                  key={id}
-                  href={`/team/${id}`}
-                  className="inline-flex items-center gap-1 text-xs bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 rounded-full transition-all hover:scale-105"
+                  key={m.id}
+                  href={`/match/${m.id}`}
+                  className="flex items-center gap-3 bg-white rounded-lg border border-gray-100 p-3 hover:shadow-md hover:border-navy-600 transition-all"
                 >
-                  <span>{team.flag}</span>
-                  <span className="hidden sm:inline">{team.name}</span>
+                  <div className="text-center shrink-0 w-12">
+                    <div className="text-[10px] text-gray-400">{m.date.slice(5)}</div>
+                    <div className="text-sm font-bold text-gray-900 font-mono">{m.time}</div>
+                  </div>
+                  <div className="flex-1 min-w-0 text-center">
+                    <span className="text-xs font-medium text-gray-900">{h?.name || 'TBD'}</span>
+                    <span className="text-gray-300 mx-1 text-[10px]">vs</span>
+                    <span className="text-xs font-medium text-gray-900">{a?.name || 'TBD'}</span>
+                  </div>
+                  <span className="text-[10px]">{tag}</span>
                 </Link>
               );
             })}
           </div>
+        </section>
+      )}
 
-          {/* Quick CTA buttons */}
-          <div className="flex flex-wrap justify-center gap-3 mt-10">
-            <Link
-              href="/schedule"
-              className="px-6 py-3 bg-white text-green-800 font-bold rounded-xl hover:bg-green-50 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-            >
-              📅 完整赛程
-            </Link>
-            <Link
-              href="/standings"
-              className="px-6 py-3 bg-white/10 backdrop-blur text-white font-bold rounded-xl hover:bg-white/20 transition-all border border-white/20"
-            >
-              📊 积分榜
-            </Link>
-            <Link
-              href="/odds"
-              className="px-6 py-3 bg-white/10 backdrop-blur text-white font-bold rounded-xl hover:bg-white/20 transition-all border border-white/20"
-            >
-              💰 赔率分析
-            </Link>
+      {/* ═══════════ Bottom: Standings + Odds ═══════════ */}
+      <section className="max-w-6xl mx-auto px-4 pb-12">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Group Standings */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">📊 小组积分榜</h2>
+              <Link href="/standings" className="text-sm text-gold-dark hover:underline font-medium">
+                全部12组 →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {getSimulatedStandings().slice(0, 6).map(group => (
+                <Link
+                  key={group.groupName}
+                  href="/standings"
+                  className="bg-white rounded-lg border border-gray-100 p-3 hover:shadow-md hover:border-navy-600 transition-all"
+                >
+                  <div className="font-bold text-sm text-gray-900 mb-2">{group.groupName} 组</div>
+                  {group.standings.slice(0, 2).map((row, i) => {
+                    const team = getTeam(row.teamId);
+                    if (!team) return null;
+                    return (
+                      <div
+                        key={row.teamId}
+                        className={`flex items-center gap-1.5 text-xs rounded px-1 py-0.5 ${
+                          i === 0 ? 'bg-qualify-light' : ''
+                        }`}
+                      >
+                        <span className="text-gray-400 w-3 tabular-nums">{i + 1}</span>
+                        <span>{team.flag}</span>
+                        <span className="font-medium text-gray-700 truncate flex-1">{team.name}</span>
+                        <span className="font-semibold text-gray-500 tabular-nums">{row.points}分</span>
+                      </div>
+                    );
+                  })}
+                  <div className="text-[10px] text-gray-400 mt-1.5 text-center">点击查看详情</div>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* ═══════════════════════════════════════════
-          TODAY'S MATCHES
-          ═══════════════════════════════════════════ */}
-      <section className="max-w-4xl mx-auto px-4 -mt-6 relative z-10">
-        <TodayMatches />
-      </section>
-
-      {/* ═══════════════════════════════════════════
-          GROUP OVERVIEW
-          ═══════════════════════════════════════════ */}
-      <section className="max-w-4xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-gray-900">📊 12个小组一览</h2>
-          <Link href="/standings" className="text-sm text-green-700 hover:underline font-medium">
-            查看完整积分榜 →
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {getSimulatedStandings().map(group => (
-            <Link
-              key={group.groupName}
-              href="/standings"
-              className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md hover:border-green-200 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-gray-900">{group.groupName} 组</span>
-                <span className="text-xs text-gray-300 group-hover:text-green-500 transition-colors">→</span>
-              </div>
-              <div className="space-y-1.5">
-                {group.standings.map((row, i) => {
-                  const team = getTeam(row.teamId);
+          {/* Champion Odds */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">💰 夺冠赔率 TOP6</h2>
+              <Link href="/odds" className="text-sm text-gold-dark hover:underline font-medium">
+                完整赔率 →
+              </Link>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="divide-y divide-gray-50">
+                {champOdds.slice(0, 6).map((item, i) => {
+                  const team = getTeam(item.teamId);
                   if (!team) return null;
                   return (
-                    <div
-                      key={row.teamId}
-                      className={`flex items-center gap-2 text-xs rounded px-1.5 py-1 ${
-                        i < 2 ? 'bg-green-50/70' : ''
-                      }`}
+                    <Link
+                      key={item.teamId}
+                      href={`/team/${item.teamId}`}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
                     >
-                      <span className="text-gray-400 w-3 tabular-nums font-medium">{i + 1}</span>
-                      <span className="text-base">{team.flag}</span>
-                      <span className="font-medium text-gray-700 truncate flex-1">{team.name}</span>
-                      <span className="font-bold text-gray-500 tabular-nums">{row.points}</span>
-                    </div>
+                      <span className={`text-xs font-bold w-5 tabular-nums ${
+                        i === 0 ? 'text-gold' : i <= 2 ? 'text-navy' : 'text-gray-400'
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <span className="text-xl">{team.flag}</span>
+                      <span className="font-semibold text-gray-900 text-sm flex-1">{team.name}</span>
+                      <span className="font-bold text-sm text-gray-900 tabular-nums">{item.odds['Bet365']}</span>
+                      <span className="text-gray-300 text-xs group-hover:text-gold transition-colors">→</span>
+                    </Link>
                   );
                 })}
               </div>
-            </Link>
-          ))}
+            </div>
+          </div>
         </div>
       </section>
     </div>
