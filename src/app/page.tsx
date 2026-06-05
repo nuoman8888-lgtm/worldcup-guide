@@ -41,13 +41,20 @@ export default function HomePage() {
             48支球队 · 104场比赛 · 全方位数据平台
           </p>
 
+          {/* ── Countdown: 制造紧迫感，放在上面 ── */}
+          <div className="mb-3">
+            <p className="text-green-200 text-sm mb-3 font-medium">距离世界杯揭幕战</p>
+            <CountdownTimer />
+          </div>
+
           {/* ── Search: 核心交互 ── */}
-          <div className="mb-5">
+          <div className="mt-8 mb-5">
+            <p className="text-green-200 text-sm mb-3 font-medium">搜索你关注的比赛</p>
             <SearchBox variant="hero" />
           </div>
 
           {/* Hot teams */}
-          <div className="flex justify-center gap-1.5 flex-wrap mb-10">
+          <div className="flex justify-center gap-1.5 flex-wrap mb-8">
             {hotTeamIds.map(id => {
               const team = getTeam(id);
               if (!team) return null;
@@ -63,9 +70,6 @@ export default function HomePage() {
               );
             })}
           </div>
-
-          {/* ── Countdown: 制造紧迫感 ── */}
-          <CountdownTimer />
 
           {/* Quick CTA buttons */}
           <div className="flex flex-wrap justify-center gap-3 mt-10">
