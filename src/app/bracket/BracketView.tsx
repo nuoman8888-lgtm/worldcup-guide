@@ -9,6 +9,18 @@ const teams = getAllTeams();
 const teamMap = new Map(teams.map(t => [t.id, t]));
 
 /* ═══════════════════════════════════════════════════
+   Per-tournament form noise — makes each simulation unique
+   ═══════════════════════════════════════════════════ */
+
+// ±60 ELO noise per team per tournament (form / injuries / morale)
+let tourForm: Map<string, number> | null = null;
+
+function adjElo(team: Team): number {
+  if (!tourForm) return team.elo;
+  return team.elo + (tourForm.get(team.id) ?? 0);
+}
+
+/* ═══════════════════════════════════════════════════
    ELO Probability Engine
    ═══════════════════════════════════════════════════ */
 
@@ -37,8 +49,10 @@ interface MatchOutcome {
 
 /** Simulate a match between two teams using ELO + Poisson-like goals */
 function playMatch(teamA: Team, teamB: Team): MatchOutcome {
-  const pA = eloProb(teamA.elo, teamB.elo);
-  const pDraw = drawProb(teamA.elo, teamB.elo);
+  const eA = adjElo(teamA);
+  const eB = adjElo(teamB);
+  const pA = eloProb(eA, eB);
+  const pDraw = drawProb(eA, eB);
   const roll = Math.random();
 
   let winner: Team | null;
@@ -51,8 +65,8 @@ function playMatch(teamA: Team, teamB: Team): MatchOutcome {
   }
 
   // Simple goal model for tiebreaking
-  const strengthA = teamA.elo / 400;
-  const strengthB = teamB.elo / 400;
+  const strengthA = eA / 400;
+  const strengthB = eB / 400;
   const goalsA = Math.max(0, Math.round(strengthA - strengthB * 0.2 + (Math.random() - 0.3) * 2.5 + 1.0));
   const goalsB = Math.max(0, Math.round(strengthB - strengthA * 0.2 + (Math.random() - 0.3) * 2.5 + 0.7));
 
@@ -126,12 +140,12 @@ function simulateGroup(groupName: string): GroupResult {
   // Update goal difference
   records.forEach(r => { r.gd = r.gf - r.ga; });
 
-  // Sort: pts → gd → gf → elo
+  // Sort: pts → gd → gf → elo (with form adjustment)
   const sorted = [...records.values()].sort((a, b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
     if (b.gd !== a.gd) return b.gd - a.gd;
     if (b.gf !== a.gf) return b.gf - a.gf;
-    return b.team.elo - a.team.elo;
+    return adjElo(b.team) - adjElo(a.team);
   });
 
   return {
@@ -172,7 +186,7 @@ function assignThirdPlaceTeams(
     if (b.pts !== a.pts) return b.pts - a.pts;
     if (b.gd !== a.gd) return b.gd - a.gd;
     if (b.gf !== a.gf) return b.gf - a.gf;
-    return b.team.elo - a.team.elo;
+    return adjElo(b.team) - adjElo(a.team);
   });
 
   const slotGroups = ['A','B','C','D','E','F','G','H'];
@@ -229,7 +243,7 @@ function buildR32Bracket(groupResults: GroupResult[]): Team[][] {
     if (b.pts !== a.pts) return b.pts - a.pts;
     if (b.gd !== a.gd) return b.gd - a.gd;
     if (b.gf !== a.gf) return b.gf - a.gf;
-    return b.team.elo - a.team.elo;
+    return adjElo(b.team) - adjElo(a.team);
   }).slice(0, 8);
 
   const thirdAssign = assignThirdPlaceTeams(bestThirds);
@@ -268,6 +282,14 @@ interface SimResult {
 }
 
 function simulateOnce(): SimResult {
+  // ── Per-tournament form noise (±60 ELO per team) ──
+  tourForm = new Map<string, number>();
+  teamMap.forEach((_, id) => {
+    // Box-Muller-ish: sum 3 uniforms for approximate normal distribution
+    const noise = (Math.random() + Math.random() + Math.random() - 1.5) * 40;
+    tourForm!.set(id, Math.round(noise));
+  });
+
   // 1. Group stage: 12 groups
   const groupResults = groups.map(g => simulateGroup(g.name));
 
@@ -275,12 +297,11 @@ function simulateOnce(): SimResult {
   const r32Matches = buildR32Bracket(groupResults);
 
   // 3. Simulate R32 → R16 → QF → SF → Final
-  // r32Matches[i] = [teamA, teamB] for match i (0-15)
   function playKnockout(match: Team[]): Team {
     const [t1, t2] = match;
     if (!t1) return t2;
     if (!t2) return t1;
-    return eloWin(t1.elo, t2.elo) ? t1 : t2;
+    return eloWin(adjElo(t1), adjElo(t2)) ? t1 : t2;
   }
 
   // R32: 16 matches → 16 winners
@@ -340,6 +361,7 @@ function simulateOnce(): SimResult {
     r16Winners[6].id === qfWinners[3].id ? r16Winners[7] : r16Winners[6],
   ];
 
+  tourForm = null; // clean up
   return { champion, runnerUp, semiFinalists, quarterFinalists };
 }
 
@@ -465,7 +487,7 @@ function runSimulations(count: number): AggregatedResults {
    AI Prediction View — Mobile-First Cards
    ═══════════════════════════════════════════════════ */
 
-const SIM_COUNT = 10000;
+const SIM_COUNT = 3000;
 
 function AIPredictionView({ onManual }: { onManual: () => void }) {
   const [results, setResults] = useState<AggregatedResults | null>(null);
