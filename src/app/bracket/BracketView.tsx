@@ -5,69 +5,76 @@ import { getAllTeams } from '@/data/teams';
 import type { Team } from '@/data/teams';
 
 /* ═══════════════════════════════════
-   Bracket data: 2026 World Cup knockout
+   Bracket rounds: R16 → QF → SF → F
+   Each match slot has a position for vertical alignment
    ═══════════════════════════════════ */
 
-interface BracketSlot {
+interface Slot {
   id: string;
-  round: 'round32' | 'round16' | 'quarterfinal' | 'semifinal' | 'thirdPlace' | 'final';
-  matchIndex: number; // position within round
-  feedsFrom: [string, string]; // IDs of the two matches feeding this one (empty for round32)
+  round: 'r16' | 'qf' | 'sf' | 'final';
+  pos: number;  // vertical center position (px)
+  feedsFrom: [string, string]; // slot IDs
+  label: string; // match label
   date: string;
   time: string;
   city: string;
 }
 
-// Build bracket structure
-const ROUNDS = ['round32', 'round16', 'quarterfinal', 'semifinal', 'final'] as const;
+type Picks = Record<string, string>;
 
-const bracketSlots: BracketSlot[] = [
-  // ── Semi-finals (2 matches) ──
-  { id: 'sf-1', round: 'semifinal', matchIndex: 0, feedsFrom: ['qf-1', 'qf-2'], date: '7/15', time: '03:00', city: '达拉斯' },
-  { id: 'sf-2', round: 'semifinal', matchIndex: 1, feedsFrom: ['qf-3', 'qf-4'], date: '7/16', time: '03:00', city: '亚特兰大' },
+// R16 slots (8 matches, pos 40 to 600, step 80)
+const R16: Slot[] = Array.from({ length: 8 }, (_, i) => ({
+  id: `r16-${i + 1}`,
+  round: 'r16' as const,
+  pos: 40 + i * 80,
+  feedsFrom: ['', ''],
+  label: `16强 ${i + 1}`,
+  date: ['7/5','7/5','7/6','7/6','7/7','7/7','7/8','7/8'][i],
+  time: ['01:00','05:00','04:00','08:00','03:00','08:00','00:00','04:00'][i],
+  city: ['墨西哥城','多伦多','洛杉矶','纽约','达拉斯','亚特兰大','费城','迈阿密'][i],
+}));
 
-  // ── Final + 3rd place ──
-  { id: '3rd', round: 'thirdPlace', matchIndex: 0, feedsFrom: ['sf-1', 'sf-2'], date: '7/19', time: '05:00', city: '迈阿密' },
-  { id: 'final', round: 'final', matchIndex: 0, feedsFrom: ['sf-1', 'sf-2'], date: '7/20', time: '03:00', city: '纽约' },
+// QF (4 matches, at centers of pairs)
+function makeQF(r16: Slot[]): Slot[] {
+  return [
+    { id: 'qf-1', round: 'qf', pos: (r16[0].pos + r16[1].pos) / 2, feedsFrom: ['r16-1','r16-2'], label: '¼决赛 1', date: '7/10', time: '04:00', city: '墨西哥城' },
+    { id: 'qf-2', round: 'qf', pos: (r16[2].pos + r16[3].pos) / 2, feedsFrom: ['r16-3','r16-4'], label: '¼决赛 2', date: '7/11', time: '03:00', city: '多伦多' },
+    { id: 'qf-3', round: 'qf', pos: (r16[4].pos + r16[5].pos) / 2, feedsFrom: ['r16-5','r16-6'], label: '¼决赛 3', date: '7/12', time: '05:00', city: '洛杉矶' },
+    { id: 'qf-4', round: 'qf', pos: (r16[6].pos + r16[7].pos) / 2, feedsFrom: ['r16-7','r16-8'], label: '¼决赛 4', date: '7/12', time: '09:00', city: '纽约' },
+  ];
+}
 
-  // ── Quarter-finals (4 matches) ──
-  { id: 'qf-1', round: 'quarterfinal', matchIndex: 0, feedsFrom: ['r16-1', 'r16-2'], date: '7/10', time: '04:00', city: '墨西哥城' },
-  { id: 'qf-2', round: 'quarterfinal', matchIndex: 1, feedsFrom: ['r16-3', 'r16-4'], date: '7/11', time: '03:00', city: '多伦多' },
-  { id: 'qf-3', round: 'quarterfinal', matchIndex: 2, feedsFrom: ['r16-5', 'r16-6'], date: '7/12', time: '05:00', city: '洛杉矶' },
-  { id: 'qf-4', round: 'quarterfinal', matchIndex: 3, feedsFrom: ['r16-7', 'r16-8'], date: '7/12', time: '09:00', city: '纽约' },
+// SF (2 matches)
+function makeSF(qf: Slot[]): Slot[] {
+  return [
+    { id: 'sf-1', round: 'sf', pos: (qf[0].pos + qf[1].pos) / 2, feedsFrom: ['qf-1','qf-2'], label: '半决赛 1', date: '7/15', time: '03:00', city: '达拉斯' },
+    { id: 'sf-2', round: 'sf', pos: (qf[2].pos + qf[3].pos) / 2, feedsFrom: ['qf-3','qf-4'], label: '半决赛 2', date: '7/16', time: '03:00', city: '亚特兰大' },
+  ];
+}
 
-  // ── Round of 16 (8 matches) ──
-  { id: 'r16-1', round: 'round16', matchIndex: 0, feedsFrom: ['r32-1', 'r32-2'], date: '7/5', time: '01:00', city: '墨西哥城' },
-  { id: 'r16-2', round: 'round16', matchIndex: 1, feedsFrom: ['r32-3', 'r32-4'], date: '7/5', time: '05:00', city: '多伦多' },
-  { id: 'r16-3', round: 'round16', matchIndex: 2, feedsFrom: ['r32-5', 'r32-6'], date: '7/6', time: '04:00', city: '洛杉矶' },
-  { id: 'r16-4', round: 'round16', matchIndex: 3, feedsFrom: ['r32-7', 'r32-8'], date: '7/6', time: '08:00', city: '纽约' },
-  { id: 'r16-5', round: 'round16', matchIndex: 4, feedsFrom: ['r32-9', 'r32-10'], date: '7/7', time: '03:00', city: '达拉斯' },
-  { id: 'r16-6', round: 'round16', matchIndex: 5, feedsFrom: ['r32-11', 'r32-12'], date: '7/7', time: '08:00', city: '亚特兰大' },
-  { id: 'r16-7', round: 'round16', matchIndex: 6, feedsFrom: ['r32-13', 'r32-14'], date: '7/8', time: '00:00', city: '费城' },
-  { id: 'r16-8', round: 'round16', matchIndex: 7, feedsFrom: ['r32-15', 'r32-16'], date: '7/8', time: '04:00', city: '迈阿密' },
+// Final
+function makeFinal(sf: Slot[]): Slot[] {
+  return [
+    { id: 'final', round: 'final', pos: (sf[0].pos + sf[1].pos) / 2, feedsFrom: ['sf-1','sf-2'], label: '决赛', date: '7/20', time: '03:00', city: '纽约' },
+  ];
+}
 
-  // ── Round of 32 (16 matches) ──
-  ...[...Array(16)].map((_, i) => ({
-    id: `r32-${i + 1}`,
-    round: 'round32' as const,
-    matchIndex: i,
-    feedsFrom: ['', ''] as [string, string],
-    date: ['6/29','6/30','6/30','6/30','7/1','7/1','7/1','7/2','7/2','7/2','7/3','7/3','7/3','7/4','7/4','7/4'][i],
-    time: ['03:00','01:00','04:30','09:00','01:00','05:00','09:00','00:00','04:00','08:00','03:00','07:00','11:00','02:00','06:00','09:30'][i],
-    city: ['墨西哥城','多伦多','洛杉矶','纽约','达拉斯','亚特兰大','费城','迈阿密','墨西哥城','多伦多','洛杉矶','纽约','达拉斯','亚特兰大','费城','迈阿密'][i],
-  })),
+const allSlots = (() => {
+  const r16 = R16;
+  const qf = makeQF(r16);
+  const sf = makeSF(qf);
+  const final = makeFinal(sf);
+  return { r16, qf, sf, final };
+})();
+
+const ROUNDS: { key: keyof typeof allSlots; title: string; width: number }[] = [
+  { key: 'r16', title: '16强', width: 140 },
+  { key: 'qf', title: '¼决赛', width: 140 },
+  { key: 'sf', title: '半决赛', width: 140 },
+  { key: 'final', title: '🏆 决赛', width: 160 },
 ];
 
-type Picks = Record<string, string>; // slotId → winning teamId
-
-const ROUND_NAMES: Record<string, string> = {
-  round32: '32强',
-  round16: '16强',
-  quarterfinal: '¼决赛',
-  semifinal: '半决赛',
-  thirdPlace: '三四名',
-  final: '🏆 决赛',
-};
+const TOTAL_HEIGHT = 680; // enough for all slots
 
 export default function BracketView() {
   const [picks, setPicks] = useState<Picks>({});
@@ -75,6 +82,49 @@ export default function BracketView() {
   const [sharing, setSharing] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
   const teams = getAllTeams();
+
+  // Get winner for a slot
+  function getWinner(slotId: string): string | null {
+    if (picks[slotId]) return picks[slotId];
+    const slot = [...allSlots.r16, ...allSlots.qf, ...allSlots.sf, ...allSlots.final].find(s => s.id === slotId);
+    if (!slot || !slot.feedsFrom[0]) return null;
+    const w1 = getWinner(slot.feedsFrom[0]);
+    const w2 = getWinner(slot.feedsFrom[1]);
+    // Auto-advance: if both feeders have winners, pick by ELO
+    if (w1 && w2 && !picks[slotId]) {
+      const t1 = teams.find(t => t.id === w1);
+      const t2 = teams.find(t => t.id === w2);
+      if (t1 && t2) {
+        const winner = t1.elo > t2.elo ? w1 : w2;
+        setPicks(prev => ({ ...prev, [slotId]: winner }));
+        return winner;
+      }
+    }
+    return null;
+  }
+
+  function getWinnerTeam(slotId: string): Team | null {
+    const wid = getWinner(slotId);
+    return wid ? teams.find(t => t.id === wid) || null : null;
+  }
+
+  function getTeamById(id: string): Team | null {
+    if (!id) return null;
+    // Check if it's a pick first
+    if (picks[id]) return teams.find(t => t.id === picks[id]) || null;
+    const winner = getWinner(id);
+    if (winner) return teams.find(t => t.id === winner) || null;
+    return null;
+  }
+
+  function handlePick(teamId: string) {
+    if (!selectingSlot) return;
+    setPicks(prev => ({ ...prev, [selectingSlot]: teamId }));
+    setSelectingSlot(null);
+  }
+
+  const champion = getWinnerTeam('final');
+  const hasChampion = champion != null;
 
   const handleShare = useCallback(async () => {
     if (!bannerRef.current) return;
@@ -84,225 +134,131 @@ export default function BracketView() {
       const canvas = await html2canvas(bannerRef.current, {
         backgroundColor: '#0F1B2D',
         scale: 2,
-        useCORS: true,
       });
-      // Create download link
       const link = document.createElement('a');
       link.download = 'my-worldcup-2026-prediction.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
-    } catch (e) {
-      console.error('Share failed:', e);
-      alert('生成图片失败，请重试');
-    }
+    } catch { /* ignore */ }
     setSharing(false);
   }, []);
 
-  // Get winner for a slot (either picked, or derived from feeder slots)
-  function getWinner(slotId: string): Team | null {
-    if (picks[slotId]) return teams.find(t => t.id === picks[slotId]) || null;
-    const slot = bracketSlots.find(s => s.id === slotId);
-    if (!slot) return null;
-    // If no pick but feeder slots have winners, check if both feeders have winners
-    if (slot.feedsFrom[0] && slot.feedsFrom[1]) {
-      const w1 = getWinner(slot.feedsFrom[0]);
-      const w2 = getWinner(slot.feedsFrom[1]);
-      if (w1 && w2) {
-        // Auto-pick the higher ELO team if not manually picked
-        return null; // Don't auto-advance — user must click
-      }
-    }
-    return null;
+  // Compute connector line positions
+  function getConnectors(fromSlot: Slot, toSlot: Slot) {
+    const x1 = 0;
+    const x2 = 0;
+    const y1 = fromSlot.pos;
+    const y2 = toSlot.pos;
+    const midY = (y1 + y2) / 2;
+    return { y1, y2, midY };
   }
-
-  function handlePick(teamId: string) {
-    if (!selectingSlot) return;
-    const newPicks = { ...picks, [selectingSlot]: teamId };
-    setPicks(newPicks);
-    setSelectingSlot(null);
-  }
-
-  // Find the predicted champion
-  const finalSlot = bracketSlots.find(s => s.id === 'final');
-  const champion = finalSlot ? getWinner('final') || picks['final'] ? teams.find(t => t.id === picks['final']) : null : null;
-  const hasChampion = champion != null;
-
-  // Calculate picks for third place (losers of SF)
-  const thirdPlaceSlot = bracketSlots.find(s => s.id === '3rd');
-  const thirdPlaceWinner = thirdPlaceSlot ? (picks['3rd'] ? teams.find(t => t.id === picks['3rd']) : null) : null;
-
-  // Round order for display
-  const displayRounds = ['round32', 'round16', 'quarterfinal', 'semifinal', 'final'];
 
   return (
-    <div>
+    <div className="relative">
       {/* Team picker modal */}
       {selectingSlot && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectingSlot(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[70vh] overflow-y-auto p-5">
-            <h3 className="font-bold text-gray-900 mb-3 text-center">选择胜者</h3>
-            <div className="grid grid-cols-4 gap-2">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelectingSlot(null)} />
+          <div className="relative bg-navy-light border border-navy-600 rounded-2xl shadow-2xl max-w-lg w-full max-h-[70vh] overflow-y-auto p-5">
+            <h3 className="font-bold text-white text-center mb-3">选择胜者</h3>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {teams.map(t => (
                 <button
                   key={t.id}
                   onClick={() => handlePick(t.id)}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gold-50 hover:border-gold transition-all border border-gray-100"
+                  className="flex flex-col items-center gap-1 p-2.5 rounded-xl hover:bg-navy-600 transition-all border border-navy-600"
                 >
                   <span className="text-2xl">{t.flag}</span>
-                  <span className="text-[10px] font-medium text-gray-700">{t.name}</span>
+                  <span className="text-[10px] font-medium text-gray-300">{t.name}</span>
+                  <span className="text-[9px] text-gray-500">#{t.fifaRank}</span>
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setSelectingSlot(null)}
-              className="block w-full mt-3 text-xs text-gray-400 hover:text-gray-500"
-            >
-              取消
+          </div>
+        </div>
+      )}
+
+      {/* Champion banner */}
+      {hasChampion && champion && (
+        <div ref={bannerRef} className="mb-8 p-8 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}>
+          <div className="text-gold text-sm font-bold mb-2 tracking-widest">FIFA WORLD CUP 2026</div>
+          <div className="text-4xl mb-4">🏆</div>
+          <div className="flex items-center justify-center gap-4 mb-3">
+            <span className="text-6xl drop-shadow-lg">{champion.flag}</span>
+            <div className="text-left">
+              <div className="text-4xl font-extrabold text-gold">{champion.name}</div>
+              <div className="text-xl text-white/60">{champion.nameEn}</div>
+              <div className="text-sm text-gray-400 mt-1">FIFA #{champion.fifaRank} · ELO {champion.elo}</div>
+            </div>
+          </div>
+          <div className="text-xs text-gray-500 mt-2">我的世界杯预测</div>
+          <div className="flex justify-center gap-3 mt-6">
+            <button onClick={() => setPicks({})} className="px-5 py-2.5 bg-navy-600 text-white rounded-lg text-sm font-medium hover:bg-navy-600/70 transition-colors">
+              🔄 重新预测
+            </button>
+            <button onClick={handleShare} disabled={sharing} className="px-6 py-2.5 bg-gold text-navy rounded-lg text-sm font-bold hover:bg-yellow-400 transition-colors disabled:opacity-50">
+              {sharing ? '生成中...' : '📸 保存图片分享'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Champion banner — shared card */}
-      {hasChampion && champion && (
-        <div
-          ref={bannerRef}
-          className="mb-6 p-6 bg-gradient-to-br from-navy to-navy-light rounded-xl text-center shadow-2xl"
-          style={{ minHeight: 200 }}
-        >
-          <div className="text-xs text-gold font-bold mb-2 tracking-widest uppercase">FIFA WORLD CUP 2026</div>
-          <div className="text-2xl font-extrabold text-white mb-4">🏆 我的世界杯预测</div>
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <span className="text-6xl drop-shadow-lg">{champion.flag}</span>
-            <div className="text-left">
-              <div className="text-3xl font-extrabold text-gold">{champion.name}</div>
-              <div className="text-lg text-white/70">{champion.nameEn}</div>
-              <div className="text-sm text-white/50 mt-1">FIFA #{champion.fifaRank} · ELO {champion.elo}</div>
-            </div>
-          </div>
-          {/* Runner-up (SF loser with highest ELO) */}
-          {(() => {
-            const sf1 = bracketSlots.find(s => s.id === 'sf-1');
-            const sf2 = bracketSlots.find(s => s.id === 'sf-2');
-            const sf1Loser = sf1 && picks[sf1.id] ? (teams.find(t => t.id !== picks[sf1.id] && (getWinner(sf1.feedsFrom[0])?.id === t.id || getWinner(sf1.feedsFrom[1])?.id === t.id))) : null;
-            const sf2Loser = sf2 && picks[sf2.id] ? (teams.find(t => t.id !== picks[sf2.id] && (getWinner(sf2.feedsFrom[0])?.id === t.id || getWinner(sf2.feedsFrom[1])?.id === t.id))) : null;
-            return null; // Keep it simple for the share card
-          })()}
-          <div className="text-xs text-white/40 mt-3">worldcup-guide.pages.dev</div>
-        </div>
-      )}
+      {/* ═══════════ Bracket tree ═══════════ */}
+      <div className="overflow-x-auto scrollbar-hide pb-6">
+        <div style={{ minWidth: 800, height: TOTAL_HEIGHT + 40 }} className="relative mx-auto max-w-4xl">
+          {ROUNDS.map((round, ri) => {
+            const slots = allSlots[round.key];
+            const nextRound = ri < ROUNDS.length - 1 ? ROUNDS[ri + 1] : null;
+            const nextSlots = nextRound ? allSlots[nextRound.key] : [];
 
-      {/* Share button row */}
-      {hasChampion && champion && (
-        <div className="flex justify-center gap-2 mb-6">
-          <button
-            onClick={() => setPicks({})}
-            className="px-4 py-2 bg-white text-navy rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            🔄 重新预测
-          </button>
-          <button
-            onClick={handleShare}
-            disabled={sharing}
-            className="px-5 py-2 bg-gold text-navy rounded-lg text-sm font-bold hover:bg-yellow-400 transition-colors shadow-md disabled:opacity-50"
-          >
-            {sharing ? '⏳ 生成中...' : '📸 保存图片分享'}
-          </button>
-        </div>
-      )}
-
-      {/* Bracket tree — horizontal scroll on mobile */}
-      <div className="overflow-x-auto pb-6 scrollbar-hide">
-        <div className="flex gap-1.5 min-w-[720px] justify-center">
-          {displayRounds.map(roundKey => {
-            const slots = bracketSlots
-              .filter(s => s.round === roundKey)
-              .sort((a, b) => a.matchIndex - b.matchIndex);
-
-            const roundCount = slots.length;
-            const isFinal = roundKey === 'final';
+            // Calculate x position
+            const prevWidths = ROUNDS.slice(0, ri).reduce((s, r) => s + r.width + 60, 0);
+            const x = prevWidths;
 
             return (
-              <div key={roundKey} className={`flex-1 ${isFinal ? 'min-w-[130px] max-w-[160px]' : 'min-w-[95px] max-w-[140px]'}`}>
-                {/* Round header */}
+              <div key={round.key} style={{ position: 'absolute', left: x, top: 0, width: round.width }}>
+                {/* Round title */}
                 <div className="text-center mb-3">
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                    {ROUND_NAMES[roundKey] || roundKey}
-                  </div>
-                  <div className="text-[10px] text-gray-400">{roundCount}场</div>
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">{round.title}</div>
                 </div>
 
-                {/* Match slots */}
-                <div
-                  className="flex flex-col justify-around"
-                  style={{
-                    minHeight: roundCount <= 2 ? 180 : roundCount <= 4 ? 400 : roundCount <= 8 ? 600 : 900,
-                    gap: roundCount <= 2 ? '60px' : roundCount <= 4 ? '24px' : '8px',
-                  }}
-                >
+                {/* Slots */}
+                <div style={{ position: 'relative', height: TOTAL_HEIGHT }}>
                   {slots.map(slot => {
-                    const winner = getWinner(slot.id);
-                    const feed1 = slot.feedsFrom[0] ? getWinner(slot.feedsFrom[0]) : null;
-                    const feed2 = slot.feedsFrom[1] ? getWinner(slot.feedsFrom[1]) : null;
+                    const winner = getWinnerTeam(slot.id);
+                    const feed1 = slot.feedsFrom[0] ? getTeamById(slot.feedsFrom[0]) : null;
+                    const feed2 = slot.feedsFrom[1] ? getTeamById(slot.feedsFrom[1]) : null;
+                    const isFinal = slot.round === 'final';
+                    const hasFeeds = slot.feedsFrom[0] !== '';
 
                     return (
-                      <button
+                      <div
                         key={slot.id}
-                        onClick={() => !winner && setSelectingSlot(slot.id)}
-                        className={`relative p-2 rounded-lg border text-center transition-all ${
-                          winner
-                            ? 'bg-gold-50 border-gold cursor-default'
-                            : 'bg-white border-gray-200 hover:border-navy-600 hover:shadow cursor-pointer'
-                        } ${slot.round === 'final' ? 'ring-2 ring-gold bg-gold-50/30 scale-105' : ''}`}
+                        style={{ position: 'absolute', top: slot.pos - 30, width: '100%' }}
                       >
-                        {/* Final trophy icon */}
-                        {slot.round === 'final' && (
-                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg">🏆</div>
+                        <MatchCard
+                          slot={slot}
+                          team1={feed1}
+                          team2={feed2}
+                          winner={winner}
+                          isFinal={isFinal}
+                          hasFeeds={hasFeeds}
+                          onClick={() => {
+                            if (!winner && hasFeeds && feed1 && feed2) {
+                              setSelectingSlot(slot.id);
+                            }
+                          }}
+                        />
+
+                        {/* Connector lines to next round */}
+                        {nextRound && nextSlots.length > 0 && (
+                          <BracketConnector
+                            fromPos={slot.pos}
+                            toSlots={nextSlots.filter(ns => ns.feedsFrom.includes(slot.id))}
+                            fromWidth={round.width}
+                          />
                         )}
-
-                        {/* Match info */}
-                        <div className={`font-mono mb-1 ${slot.round === 'final' ? 'text-[10px] font-bold text-gold-dark' : 'text-[9px] text-gray-400'}`}>
-                          {slot.date} {slot.time}
-                        </div>
-
-                        {/* Teams */}
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="text-center flex-1">
-                            {feed1 ? (
-                              <>
-                                <div className={slot.round === 'final' ? 'text-xl' : 'text-lg'}>{feed1.flag}</div>
-                                <div className={`font-medium truncate ${slot.round === 'final' ? 'text-[10px] text-gray-900' : 'text-[9px] text-gray-900'}`}>{feed1.name}</div>
-                              </>
-                            ) : (
-                              <div className="text-lg text-gray-300">❓</div>
-                            )}
-                          </div>
-
-                          <span className="text-[9px] text-gray-400 font-bold">VS</span>
-
-                          <div className="text-center flex-1">
-                            {feed2 ? (
-                              <>
-                                <div className={slot.round === 'final' ? 'text-xl' : 'text-lg'}>{feed2.flag}</div>
-                                <div className={`font-medium truncate ${slot.round === 'final' ? 'text-[10px] text-gray-900' : 'text-[9px] text-gray-900'}`}>{feed2.name}</div>
-                              </>
-                            ) : (
-                              <div className="text-lg text-gray-300">❓</div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Winner indicator */}
-                        {winner && (
-                          <div className={`font-bold ${slot.round === 'final' ? 'mt-1.5 text-xs text-gold-dark' : 'mt-1.5 text-[10px] text-gold-dark'}`}>
-                            → {winner.name}
-                          </div>
-                        )}
-
-                        {/* City */}
-                        <div className="text-[8px] text-gray-400 mt-1">{slot.city}</div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -314,46 +270,182 @@ export default function BracketView() {
 
       {/* Help text */}
       {!hasChampion && (
-        <div className="text-center mt-8 p-6 bg-white rounded-xl border border-gray-100">
-          <div className="text-2xl mb-2">👆</div>
-          <p className="text-sm text-gray-600 font-medium">从32强赛开始，点击每场比赛选择你认为会晋级的球队</p>
-          <p className="text-xs text-gray-400 mt-1">胜者自动进入下一轮 · 一路选择直到冠军</p>
+        <div className="text-center mt-8 p-8 rounded-2xl border border-navy-600" style={{ background: 'rgba(26,39,64,0.5)' }}>
+          <div className="text-3xl mb-3">👆</div>
+          <p className="text-white font-medium">点击每场比赛选择你认为会晋级的球队</p>
+          <p className="text-gray-400 text-sm mt-1">胜者自动进入下一轮，一路选择直到冠军</p>
           <button
             onClick={() => {
-              // Quick-pick: auto-select based on ELO
+              // Quick-pick: ELO-based
               const newPicks: Picks = {};
-              const allSlots = bracketSlots;
-              // Process rounds in order
-              const order = ['round32', 'round16', 'quarterfinal', 'semifinal', 'final', 'thirdPlace'];
-              for (const round of order) {
-                for (const slot of allSlots.filter(s => s.round === round)) {
-                  const f1 = slot.feedsFrom[0] ? newPicks[slot.feedsFrom[0]] : null;
-                  const f2 = slot.feedsFrom[1] ? newPicks[slot.feedsFrom[1]] : null;
-                  const t1 = f1 ? teams.find(t => t.id === f1) : null;
-                  const t2 = f2 ? teams.find(t => t.id === f2) : null;
-                  if (t1 && t2) {
-                    newPicks[slot.id] = (t1.elo > t2.elo ? t1.id : t2.id);
-                  }
-                }
-              }
-              // Fill round32 with top 32 ELO teams
+              // Fill R16 with top 32 ELO teams
               const top32 = [...teams].sort((a, b) => b.elo - a.elo).slice(0, 32);
-              const r32Slots = allSlots.filter(s => s.round === 'round32');
-              r32Slots.forEach((slot, i) => {
-                if (i * 2 < top32.length) {
-                  const t1 = top32[i * 2];
-                  const t2 = top32[i * 2 + 1];
-                  newPicks[slot.id] = t1.elo > t2.elo ? t1.id : t2.id;
-                }
+              allSlots.r16.forEach((slot, i) => {
+                const t1 = top32[i * 2];
+                const t2 = top32[i * 2 + 1];
+                if (t1 && t2) newPicks[slot.id] = t1.elo > t2.elo ? t1.id : t2.id;
               });
+              // Auto rest via getWinner cascade
               setPicks(newPicks);
+              // Trigger cascade
+              setTimeout(() => {
+                const cascade = (slots: Slot[]) => {
+                  slots.forEach(s => {
+                    if (s.feedsFrom[0] && !newPicks[s.id]) {
+                      const w1 = newPicks[s.feedsFrom[0]];
+                      const w2 = newPicks[s.feedsFrom[1]];
+                      if (w1 && w2) {
+                        const t1 = teams.find(t => t.id === w1);
+                        const t2 = teams.find(t => t.id === w2);
+                        if (t1 && t2) {
+                          newPicks[s.id] = t1.elo > t2.elo ? t1.id : t2.id;
+                        }
+                      }
+                    }
+                  });
+                };
+                cascade(allSlots.qf);
+                cascade(allSlots.sf);
+                cascade(allSlots.final);
+                setPicks({ ...newPicks });
+              }, 100);
             }}
-            className="mt-4 px-4 py-2 bg-navy text-white rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
+            className="mt-5 px-6 py-3 bg-gold text-navy rounded-xl text-sm font-bold hover:bg-yellow-400 transition-colors"
           >
             ⚡ 快速预测（基于ELO）
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+/* ═══════════════════════════════════
+   Match Card — single bracket slot
+   ═══════════════════════════════════ */
+
+function MatchCard({
+  slot, team1, team2, winner, isFinal, hasFeeds, onClick,
+}: {
+  slot: Slot;
+  team1: Team | null;
+  team2: Team | null;
+  winner: Team | null;
+  isFinal: boolean;
+  hasFeeds: boolean;
+  onClick: () => void;
+}) {
+  const clickable = hasFeeds && !winner && team1 && team2;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`
+        relative rounded-lg border px-3 py-2.5 text-center transition-all
+        ${isFinal
+          ? 'border-gold bg-navy-light ring-1 ring-gold/50 shadow-lg shadow-gold/10'
+          : winner
+            ? 'border-navy-600 bg-navy-light'
+            : clickable
+              ? 'border-navy-600 bg-navy-light cursor-pointer hover:border-navy-400 hover:shadow-md'
+              : 'border-navy-700 bg-navy-light/50'
+        }
+      `}
+      style={{ minHeight: 60 }}
+    >
+      {/* Trophy for final */}
+      {isFinal && (
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-2xl drop-shadow-lg">🏆</div>
+      )}
+
+      {/* Date */}
+      <div className="text-[10px] text-gray-500 font-mono mb-1.5">
+        {slot.date} {slot.time}
+      </div>
+
+      {/* Teams */}
+      <div className="flex items-center gap-2">
+        <TeamLine team={team1} isWinner={winner ? team1?.id === winner.id : false} />
+        <span className="text-[10px] text-gray-600 font-bold shrink-0">VS</span>
+        <TeamLine team={team2} isWinner={winner ? team2?.id === winner.id : false} />
+      </div>
+
+      {/* Winner highlight */}
+      {winner && (
+        <div className="mt-1.5 text-[10px] font-bold text-gold">
+          {winner.flag} {winner.name} 晋级
+        </div>
+      )}
+
+      {/* City */}
+      <div className="text-[9px] text-gray-600 mt-1">{slot.city}</div>
+    </div>
+  );
+}
+
+function TeamLine({ team, isWinner }: { team: Team | null; isWinner: boolean }) {
+  if (!team) {
+    return (
+      <div className="flex-1 text-center">
+        <div className="text-lg text-gray-700">?</div>
+        <div className="text-[9px] text-gray-600">待定</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex-1 text-center ${isWinner ? '' : ''}`}>
+      <div className={`text-xl ${isWinner ? 'drop-shadow-md' : ''}`}>{team.flag}</div>
+      <div className={`text-[10px] font-semibold truncate ${isWinner ? 'text-gold' : 'text-gray-300'}`}>
+        {team.name}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════
+   Bracket Connector Lines
+   ═══════════════════════════════════ */
+
+function BracketConnector({
+  fromPos, toSlots, fromWidth,
+}: {
+  fromPos: number;
+  toSlots: Slot[];
+  fromWidth: number;
+}) {
+  if (toSlots.length === 0) return null;
+
+  const toSlot = toSlots[0];
+  const y1 = fromPos;
+  const y2 = toSlot.pos;
+  const midY = (y1 + y2) / 2;
+  const gap = 30; // half of the gap between columns
+
+  const x1 = fromWidth;
+  const x2 = x1 + gap;
+
+  if (y1 === y2) {
+    // Straight line
+    return (
+      <svg style={{ position: 'absolute', left: fromWidth, top: 0, width: gap + 10, height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
+        <line x1={0} y1={y1} x2={gap} y2={y2} stroke="#334155" strokeWidth={1} />
+      </svg>
+    );
+  }
+
+  // Elbow connector: horizontal → vertical → horizontal
+  return (
+    <svg style={{ position: 'absolute', left: fromWidth, top: 0, width: gap + 10, height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
+      <path
+        d={`M 0 ${y1} L ${gap / 2} ${y1} L ${gap / 2} ${y2} L ${gap} ${y2}`}
+        fill="none"
+        stroke="#334155"
+        strokeWidth={1}
+      />
+      {/* Dot at each end */}
+      <circle cx={0} cy={y1} r={2} fill="#475569" />
+      <circle cx={gap} cy={y2} r={2} fill="#475569" />
+    </svg>
   );
 }
