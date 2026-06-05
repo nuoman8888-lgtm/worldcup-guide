@@ -135,6 +135,10 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
                   <td className="text-center py-3 pr-5 font-bold text-gray-900 tabular-nums">{row.points}</td>
                   <td className="text-center py-3 pr-3">
                     {(() => {
+                      const totalPts = data.standings.reduce((s, r) => s + r.points, 0);
+                      if (totalPts === 0) {
+                        return <span className="text-xs text-gray-400">--</span>;
+                      }
                       const prob = computeQualProb(row.teamId, data.standings, data.groupName);
                       return (
                         <div className="flex items-center gap-1.5 justify-end">

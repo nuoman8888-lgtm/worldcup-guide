@@ -86,7 +86,15 @@ export default function SchedulePage() {
       </div>
 
       {/* Stage Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
+      <div
+        className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        onWheel={(e) => {
+          const el = e.currentTarget;
+          el.scrollLeft += e.deltaY;
+          e.preventDefault();
+        }}
+      >
         {STAGES.map(stage => (
           <button
             key={stage.value}
@@ -103,8 +111,16 @@ export default function SchedulePage() {
       </div>
 
       {/* Date Navigation — horizontal scroll with fade masks */}
-      <div className="relative mb-8">
-        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="relative mb-8 group/dates">
+        <div
+          className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}
+          onWheel={(e) => {
+            const el = e.currentTarget;
+            el.scrollLeft += e.deltaY;
+            e.preventDefault();
+          }}
+        >
         <button
           onClick={() => setSelectedDate('all')}
           className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${

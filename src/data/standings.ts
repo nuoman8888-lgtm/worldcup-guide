@@ -37,37 +37,8 @@ export function getInitialStandings(): GroupStandings[] {
 }
 
 export function getSimulatedStandings(): GroupStandings[] {
-  return groups.map(g => {
-    const teamIds = [...g.teams];
-    const mockResults: Record<string, { w: number; d: number; l: number; gf: number; ga: number }> = {};
-
-    teamIds.forEach((tid, idx) => {
-      if (idx === 0) {
-        mockResults[tid] = { w: 2, d: 1, l: 0, gf: 5, ga: 1 };
-      } else if (idx === 1) {
-        mockResults[tid] = { w: 1, d: 1, l: 1, gf: 3, ga: 3 };
-      } else if (idx === 2) {
-        mockResults[tid] = { w: 1, d: 0, l: 2, gf: 2, ga: 5 };
-      } else {
-        mockResults[tid] = { w: 0, d: 0, l: 3, gf: 1, ga: 6 };
-      }
-    });
-
-    return {
-      groupName: g.name,
-      standings: teamIds.map(teamId => ({
-        teamId,
-        played: 3,
-        won: mockResults[teamId].w,
-        drawn: mockResults[teamId].d,
-        lost: mockResults[teamId].l,
-        goalsFor: mockResults[teamId].gf,
-        goalsAgainst: mockResults[teamId].ga,
-        goalDiff: mockResults[teamId].gf - mockResults[teamId].ga,
-        points: mockResults[teamId].w * 3 + mockResults[teamId].d,
-      })).sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff),
-    };
-  });
+  // Return placeholder data (all zeros) — real data will come from API later
+  return getInitialStandings();
 }
 
 export interface ChampionshipProb {

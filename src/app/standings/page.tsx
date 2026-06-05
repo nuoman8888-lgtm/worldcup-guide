@@ -11,6 +11,7 @@ export default function StandingsPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">📊 小组积分榜</h1>
         <p className="text-gray-500 text-sm">
           12个小组 · 每组前2名直接晋级32强 · 8个最佳第3名晋级
+          <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">数据待更新</span>
         </p>
       </div>
 
