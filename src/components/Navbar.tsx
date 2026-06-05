@@ -9,6 +9,7 @@ const navItems = [
   { href: '/', label: '首页' },
   { href: '/schedule', label: '赛程' },
   { href: '/standings', label: '积分榜' },
+  { href: '/bracket', label: '淘汰赛' },
   { href: '/odds', label: '赔率' },
 ];
 

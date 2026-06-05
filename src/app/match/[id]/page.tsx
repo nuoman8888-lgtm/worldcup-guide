@@ -116,6 +116,109 @@ export default async function MatchPage({
         </div>
       </div>
 
+      {/* ── Data Comparison + Recent Form ── */}
+      {homeTeam && awayTeam && (
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Data Comparison */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <h3 className="font-bold text-gray-900 mb-4">📊 数据对比</h3>
+            <div className="space-y-3">
+              {[
+                { label: 'FIFA排名', home: `#${homeTeam.fifaRank}`, away: `#${awayTeam.fifaRank}`, better: homeTeam.fifaRank < awayTeam.fifaRank ? 'home' : 'away' },
+                { label: 'ELO评分', home: homeTeam.elo.toString(), away: awayTeam.elo.toString(), better: homeTeam.elo > awayTeam.elo ? 'home' : 'away' },
+                { label: '世界杯参赛', home: `${homeTeam.worldCupApps}次`, away: `${awayTeam.worldCupApps}次`, better: homeTeam.worldCupApps > awayTeam.worldCupApps ? 'home' : 'away' },
+                { label: '历史最佳', home: homeTeam.bestResult, away: awayTeam.bestResult, better: null },
+                { label: '小组赔率', home: homeTeam.groupStageOdds.toString(), away: awayTeam.groupStageOdds.toString(), better: homeTeam.groupStageOdds < awayTeam.groupStageOdds ? 'home' : 'away' },
+              ].map(row => (
+                <div key={row.label} className="flex items-center text-sm">
+                  <span className={`flex-1 text-right font-semibold tabular-nums ${
+                    row.better === 'home' ? 'text-navy' : 'text-gray-600'
+                  }`}>
+                    {row.home}
+                  </span>
+                  <span className="w-20 text-center text-xs text-gray-400 font-medium">{row.label}</span>
+                  <span className={`flex-1 text-left font-semibold tabular-nums ${
+                    row.better === 'away' ? 'text-navy' : 'text-gray-600'
+                  }`}>
+                    {row.away}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Form */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <h3 className="font-bold text-gray-900 mb-4">📈 近期状态</h3>
+            <div className="space-y-4">
+              {[homeTeam, awayTeam].map((team, ti) => {
+                const wins = team.recentForm.filter(f => f === 'W').length;
+                return (
+                  <div key={team.id}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{team.flag}</span>
+                      <span className="text-sm font-semibold text-gray-900">{team.name}</span>
+                      <span className="text-xs text-gray-400 ml-auto">近5场 {wins}胜{team.recentForm.filter(f => f === 'D').length}平{team.recentForm.filter(f => f === 'L').length}负</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {team.recentForm.map((f, i) => (
+                        <span
+                          key={i}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                            f === 'W' ? 'bg-qualify-light text-qualify border border-qualify' :
+                            f === 'D' ? 'bg-yellow-50 text-yellow-600 border border-yellow-300' :
+                            'bg-red-50 text-red-500 border border-red-300'
+                          }`}
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Result details */}
+                    <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+                      {team.recentResults.map((r, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <span className={`w-1 h-1 rounded-full ${
+                            team.recentForm[i] === 'W' ? 'bg-qualify' :
+                            team.recentForm[i] === 'D' ? 'bg-yellow-500' : 'bg-red-500'
+                          }`} />
+                          {r}
+                        </div>
+                      ))}
+                    </div>
+                    {ti === 0 && <div className="border-t border-gray-100 my-3" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Core Players ── */}
+      {homeTeam && awayTeam && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-8">
+          <h3 className="font-bold text-gray-900 mb-4">⭐ 核心球员</h3>
+          <div className="grid grid-cols-2 gap-6">
+            {[homeTeam, awayTeam].map(team => (
+              <div key={team.id}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xl">{team.flag}</span>
+                  <span className="text-sm font-semibold text-gray-900">{team.name}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {team.keyPlayers.map(p => (
+                    <span key={p} className="px-3 py-1.5 bg-navy text-gold-light rounded-full text-xs font-medium">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* AI Prediction & Odds */}
       {prediction && (
         <div className="grid md:grid-cols-2 gap-8 mb-8">
@@ -131,6 +234,16 @@ export default async function MatchPage({
                 置信度: {prediction.confidence === 'high' ? '高' : prediction.confidence === 'medium' ? '中' : '低'}
               </span>
             </h3>
+
+            {/* AI One-Line Analysis */}
+            <div className="mb-5 p-3 bg-gold-50 border border-gold-light rounded-lg">
+              <p className="text-sm text-navy leading-relaxed">
+                💡 {homeTeam && awayTeam && prediction.homeWinProb > prediction.awayWinProb
+                  ? `${homeTeam.name}整体实力占优（FIFA #${homeTeam.fifaRank} vs #${awayTeam.fifaRank}），${prediction.homeWinProb > 50 ? '取胜概率较大' : '但优势并不明显'}。${prediction.drawProb > 25 ? '平局可能性不容忽视，' : ''}预计${prediction.homeWinProb > 50 ? homeTeam.name : '双方'}${prediction.homeWinProb > 50 ? `小胜` : '将陷入苦战'}。`
+                  : `${awayTeam?.name}整体实力占优（FIFA #${awayTeam?.fifaRank} vs #${homeTeam?.fifaRank}），${prediction.awayWinProb > 50 ? '取胜概率较大' : '但优势并不明显'}。${prediction.drawProb > 25 ? '平局可能性不容忽视，' : ''}预计${prediction.awayWinProb > 50 ? awayTeam?.name : '双方'}${prediction.awayWinProb > 50 ? `小胜` : '将陷入苦战'}。`
+                }
+              </p>
+            </div>
 
             <div className="grid grid-cols-3 gap-3 mb-5">
               <div className="bg-qualify-light rounded-lg p-3 text-center">

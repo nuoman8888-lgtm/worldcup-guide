@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { CountdownBar } from '@/components/CountdownBar';
 import { TodayFocus } from '@/components/TodayFocus';
+import { TodayMustWatch } from '@/components/TodayMustWatch';
 import { ChampionFavorites } from '@/components/ChampionFavorites';
+import { MyTeamWidget } from '@/components/MyTeamWidget';
+import MyTeamModal from '@/components/MyTeamModal';
 import { getSimulatedStandings } from '@/data/standings';
 import { getTeam } from '@/data/teams';
 import { getChampionOdds } from '@/data/odds';
@@ -9,11 +12,14 @@ import { getUpcomingMatches } from '@/data/matches';
 
 // ── Homepage: compact above-fold, dual-column, match-first ──
 export default function HomePage() {
-  const champOdds = getChampionOdds().slice(0, 8);
+  const champOdds = getChampionOdds().slice(0, 5);
   const upcoming = getUpcomingMatches().slice(0, 6);
 
   return (
     <div className="min-h-screen">
+      {/* MyTeam modal (first visit) */}
+      <MyTeamModal />
+
       {/* ═══════════ Status bar — compact ═══════════ */}
       <section className="bg-navy border-b border-navy-600">
         <div className="max-w-6xl mx-auto px-4 py-3">
@@ -24,26 +30,32 @@ export default function HomePage() {
       {/* ═══════════ Main: dual-column ═══════════ */}
       <section className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-5 gap-6">
-          {/* Left: focus matches (3/5) */}
-          <div className="lg:col-span-3">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">📅 焦点比赛</h2>
-              <Link href="/schedule" className="text-sm text-gold-dark hover:underline font-medium">
-                完整赛程 →
-              </Link>
+          {/* Left: must-watch + focus matches (3/5) */}
+          <div className="lg:col-span-3 space-y-5">
+            <TodayMustWatch />
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold text-gray-900">📅 焦点比赛</h2>
+                <Link href="/schedule" className="text-sm text-gold-dark hover:underline font-medium">
+                  完整赛程 →
+                </Link>
+              </div>
+              <TodayFocus />
             </div>
-            <TodayFocus />
           </div>
 
-          {/* Right: champion favorites (2/5) */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">🏆 冠军热门</h2>
-              <Link href="/odds" className="text-sm text-gold-dark hover:underline font-medium">
-                完整赔率 →
-              </Link>
+          {/* Right: my team + champion favorites (2/5) */}
+          <div className="lg:col-span-2 space-y-5">
+            <MyTeamWidget />
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold text-gray-900">🏆 冠军热门</h2>
+                <Link href="/odds" className="text-sm text-gold-dark hover:underline font-medium">
+                  完整赔率 →
+                </Link>
+              </div>
+              <ChampionFavorites teams={champOdds} />
             </div>
-            <ChampionFavorites teams={champOdds} />
           </div>
         </div>
       </section>
