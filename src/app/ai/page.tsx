@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { getChampionshipProbabilities } from '@/data/standings';
 import { getTeam, teams } from '@/data/teams';
 import { predictMatch, aiChat, getChampionProbData } from '@/lib/ai';
 

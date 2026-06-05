@@ -274,125 +274,7 @@ export default function BracketView() {
 
       {/* ═══════ Bracket Tree ═══════ */}
       <div className="overflow-x-auto scrollbar-hide pb-8">
-        <div className="flex justify-center gap-0 min-w-[800px]">
-          {ROUNDS.map((round, ri) => {
-            const isLast = ri === ROUNDS.length - 1;
-            const nextRound = !isLast ? ROUNDS[ri + 1] : null;
-
-            return (
-              <div key={round.key} className="flex flex-col items-center" style={{ minWidth: ri === 3 ? 170 : 140 }}>
-                {/* Round header */}
-                <div className="mb-3">
-                  <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full ${
-                    ri === 3 ? 'bg-gold text-navy' : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {ri === 3 ? '🏆 ' : ''}{round.title}
-                  </span>
-                </div>
-
-                {/* Match slots with connector lines */}
-                <div className="flex flex-col items-center" style={{ gap: round.slots.length <= 2 ? '48px' : round.slots.length <= 4 ? '24px' : '8px' }}>
-                  {round.slots.map((slot, si) => {
-                    const winner = picks[slot.id] ? teams.find(t => t.id === picks[slot.id]) : null;
-                    const isFinal = slot.round === 'final';
-                    const hasFeeders = slot.feedsFrom.length > 0;
-                    const feeder1 = hasFeeders && slot.feedsFrom[0] ? (picks[slot.feedsFrom[0]] ? teams.find(t => t.id === picks[slot.feedsFrom[0]]) : null) : null;
-                    const feeder2 = hasFeeders && slot.feedsFrom[1] ? (picks[slot.feedsFrom[1]] ? teams.find(t => t.id === picks[slot.feedsFrom[1]]) : null) : null;
-
-                    // For R16: show ELO-based seeded teams since no picks yet
-                    let t1 = feeder1;
-                    let t2 = feeder2;
-                    if (slot.round === 'r16') {
-                      const top16 = [...teams].sort((a, b) => b.elo - a.elo).slice(0, 16);
-                      t1 = top16[si * 2] || null;
-                      t2 = top16[si * 2 + 1] || null;
-                    }
-
-                    const canClick = t1 && t2 && !winner && (slot.round === 'r16' || (feeder1 && feeder2));
-
-                    return (
-                      <div key={slot.id} className="flex items-center">
-                        {/* Connector from previous round */}
-                        {!isLast && nextRound && (
-                          <ConnectorLines
-                            matchIndex={si}
-                            matchCount={round.slots.length}
-                            nextMatchCount={nextRound.slots.length}
-                          />
-                        )}
-
-                        {/* Match card */}
-                        <button
-                          onClick={() => canClick && setSelectingSlot(slot.id)}
-                          disabled={!canClick}
-                          className={`
-                            relative rounded-xl border px-3 py-2.5 text-center transition-all w-[128px]
-                            ${isFinal
-                              ? 'border-gold bg-gradient-to-b from-yellow-50 to-white shadow-md shadow-gold/20'
-                              : winner
-                                ? 'border-gray-200 bg-white shadow-sm'
-                                : canClick
-                                  ? 'border-gray-200 bg-white hover:border-navy-400 hover:shadow-md cursor-pointer'
-                                  : 'border-gray-100 bg-gray-50'
-                            }
-                          `}
-                          style={{ minHeight: isFinal ? 80 : 64 }}
-                        >
-                          {isFinal && <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xl">🏆</div>}
-
-                          {/* Time */}
-                          <div className="text-[10px] text-gray-400 font-mono mb-1.5">{slot.date} {slot.time}</div>
-
-                          {/* Teams */}
-                          <div className="flex items-center gap-1.5">
-                            <div className="flex-1 text-center min-w-0">
-                              {t1 ? (
-                                <>
-                                  <div className="text-lg">{t1.flag}</div>
-                                  <div className={`text-[10px] font-semibold truncate ${winner && t1.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>
-                                    {t1.name}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="text-gray-300 text-lg">?</div>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-gray-300 font-bold shrink-0">VS</span>
-                            <div className="flex-1 text-center min-w-0">
-                              {t2 ? (
-                                <>
-                                  <div className="text-lg">{t2.flag}</div>
-                                  <div className={`text-[10px] font-semibold truncate ${winner && t2.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>
-                                    {t2.name}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="text-gray-300 text-lg">?</div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Winner indicator */}
-                          {winner && (
-                            <div className="mt-1.5 text-[10px] font-bold text-gold-dark">
-                              {winner.flag} {winner.name} 晋级
-                            </div>
-                          )}
-
-                          {!winner && canClick && (
-                            <div className="mt-1 text-[9px] text-gray-400">点击选择 →</div>
-                          )}
-
-                          <div className="text-[8px] text-gray-400 mt-1">{slot.city}</div>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <BracketTree rounds={ROUNDS} picks={picks} teams={teams} onSelectSlot={setSelectingSlot} />
       </div>
 
       {/* ═══════ Empty State ═══════ */}
@@ -409,46 +291,165 @@ export default function BracketView() {
 }
 
 /* ═══════════════════════════════════
-   Connector Lines (CSS borders)
+   Bracket Tree — proper connector columns
    ═══════════════════════════════════ */
 
-function ConnectorLines({ matchIndex, matchCount, nextMatchCount }: {
-  matchIndex: number;
-  matchCount: number;
-  nextMatchCount: number;
-}) {
-  // Draw lines connecting this match to the next round
-  // Each next-round match takes 2 current-round matches
-  const nextIdx = Math.floor(matchIndex / 2);
-  const isUpper = matchIndex % 2 === 0;
-  const totalPairs = matchCount / 2;
-  const nextSpacing = matchCount / nextMatchCount; // should be 2
+const CARD_H = 64;
+const GAP_SM = 6;   // gap for rounds with many cards (R16)
+const GAP_MD = 16;  // gap for medium rounds (QF)
+const GAP_LG = 36;  // gap for rounds with few cards (SF)
+const COL_W = 128;
+const CONN_W = 44;
 
-  // Render a connector bracket shape:
-  // Upper half: ─┐
-  // Lower half: ─┘
-  // These connect to the center of the pair
+function getGap(count: number): number {
+  if (count <= 2) return GAP_LG;
+  if (count <= 4) return GAP_MD;
+  return GAP_SM;
+}
+
+function BracketTree({ rounds, picks, teams, onSelectSlot }: {
+  rounds: typeof ROUNDS;
+  picks: Picks;
+  teams: Team[];
+  onSelectSlot: (id: string) => void;
+}) {
+  return (
+    <div className="flex justify-center min-w-[780px]">
+      {rounds.map((round, ri) => {
+        const gap = getGap(round.slots.length);
+        const isFinal = ri === 3;
+        const cardH = isFinal ? 80 : CARD_H;
+
+        return (
+        <div key={round.key} className="flex items-stretch">
+          {/* Round column */}
+          <div className="flex flex-col items-center" style={{ width: COL_W }}>
+            <div className="mb-3">
+              <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full ${
+                isFinal ? 'bg-gold text-navy' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {isFinal ? '🏆 ' : ''}{round.title}
+              </span>
+            </div>
+
+            <div className="flex flex-col items-center" style={{ gap }}>
+              {round.slots.map((slot, si) => {
+                const winner = picks[slot.id] ? teams.find(t => t.id === picks[slot.id]) : null;
+                const isFinal = slot.round === 'final';
+                const hasFeeders = slot.feedsFrom.length > 0;
+                const feeder1 = hasFeeders && slot.feedsFrom[0] ? (picks[slot.feedsFrom[0]] ? teams.find(t => t.id === picks[slot.feedsFrom[0]]) : null) : null;
+                const feeder2 = hasFeeders && slot.feedsFrom[1] ? (picks[slot.feedsFrom[1]] ? teams.find(t => t.id === picks[slot.feedsFrom[1]]) : null) : null;
+
+                let t1 = feeder1, t2 = feeder2;
+                if (slot.round === 'r16') {
+                  const top16 = [...teams].sort((a, b) => b.elo - a.elo).slice(0, 16);
+                  t1 = top16[si * 2] || null;
+                  t2 = top16[si * 2 + 1] || null;
+                }
+
+                const canClick = t1 && t2 && !winner && (slot.round === 'r16' || (feeder1 && feeder2));
+
+                return (
+                  <button
+                    key={slot.id}
+                    onClick={() => canClick && onSelectSlot(slot.id)}
+                    disabled={!canClick}
+                    className={`
+                      relative rounded-xl border px-3 py-2.5 text-center transition-all
+                      ${isFinal
+                        ? 'border-gold bg-gradient-to-b from-yellow-50 to-white shadow-md shadow-gold/20'
+                        : winner ? 'border-gray-200 bg-white shadow-sm'
+                        : canClick ? 'border-gray-200 bg-white hover:border-navy-400 hover:shadow-md cursor-pointer'
+                        : 'border-gray-100 bg-gray-50'
+                      }
+                    `}
+                    style={{ width: 118, minHeight: isFinal ? 80 : CARD_H }}
+                  >
+                    {isFinal && <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xl">🏆</div>}
+                    <div className="text-[10px] text-gray-400 font-mono mb-1.5">{slot.date} {slot.time}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex-1 text-center min-w-0">
+                        {t1 ? (
+                          <>
+                            <div className="text-lg">{t1.flag}</div>
+                            <div className={`text-[10px] font-semibold truncate ${winner && t1.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>{t1.name}</div>
+                          </>
+                        ) : <div className="text-gray-300 text-lg">?</div>}
+                      </div>
+                      <span className="text-[10px] text-gray-300 font-bold shrink-0">VS</span>
+                      <div className="flex-1 text-center min-w-0">
+                        {t2 ? (
+                          <>
+                            <div className="text-lg">{t2.flag}</div>
+                            <div className={`text-[10px] font-semibold truncate ${winner && t2.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>{t2.name}</div>
+                          </>
+                        ) : <div className="text-gray-300 text-lg">?</div>}
+                      </div>
+                    </div>
+                    {winner && <div className="mt-1.5 text-[10px] font-bold text-gold-dark">{winner.flag} {winner.name} 晋级</div>}
+                    {!winner && canClick && <div className="mt-1 text-[9px] text-gray-400">点击选择 →</div>}
+                    <div className="text-[8px] text-gray-400 mt-1">{slot.city}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Connector column */}
+          {ri < rounds.length - 1 && (
+            <BracketConnectorCol
+              fromSlots={round.slots}
+              toSlots={rounds[ri + 1].slots}
+              fromGap={gap}
+              fromCardH={cardH}
+              toGap={getGap(rounds[ri + 1].slots.length)}
+              toCardH={rounds[ri + 1].key === 'final' ? 80 : CARD_H}
+            />
+          )}
+        </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BracketConnectorCol({ fromSlots, toSlots, fromGap, fromCardH, toGap, toCardH }: {
+  fromSlots: Slot[]; toSlots: Slot[];
+  fromGap: number; fromCardH: number;
+  toGap: number; toCardH: number;
+}) {
+  const fromCount = fromSlots.length;
+  const toCount = toSlots.length;
+  const totalH = fromCount * fromCardH + (fromCount - 1) * fromGap;
+  const pairs: { from: [number, number]; toY: number }[] = [];
+  for (let i = 0; i < fromCount; i += 2) {
+    // Center Y of fromSlot[i] and fromSlot[i+1]
+    const y0 = i * (fromCardH + fromGap) + fromCardH / 2;
+    const y1 = y0 + fromCardH + fromGap;
+    // Center Y of target toSlot
+    const toIdx = i / 2;
+    const toSpacing = (fromCount / toCount) * (fromCardH + fromGap);
+    const targetY = toIdx * toSpacing + toSpacing / 2;
+    pairs.push({ from: [y0, y1], toY: targetY });
+  }
 
   return (
-    <div className="relative" style={{ width: 40, height: matchCount <= 2 ? 48 : 24, flexShrink: 0 }}>
-      <svg width="100%" height="100%" className="overflow-visible" style={{ overflow: 'visible' }}>
-        {isUpper ? (
-          // Upper → goes down and right
-          <path
-            d={`M 0 12 L 20 12 L 20 ${matchCount <= 2 ? 48 : 36} L 40 ${matchCount <= 2 ? 48 : 36}`}
-            fill="none"
-            stroke="#D1D5DB"
-            strokeWidth={1.5}
-          />
-        ) : (
-          // Lower → goes up and right
-          <path
-            d={`M 0 12 L 20 12 L 20 ${matchCount <= 2 ? -12 : -12} L 40 ${matchCount <= 2 ? -12 : -12}`}
-            fill="none"
-            stroke="#D1D5DB"
-            strokeWidth={1.5}
-          />
-        )}
+    <div style={{ width: CONN_W, flexShrink: 0, height: totalH, position: 'relative', marginTop: 30 }}>
+      <svg width={CONN_W} height={totalH} style={{ overflow: 'visible' }}>
+        {pairs.map((pair, pi) => (
+          <g key={pi}>
+            <path
+              d={`M 0 ${pair.from[0]} L ${CONN_W / 2} ${pair.from[0]} L ${CONN_W / 2} ${pair.toY} L ${CONN_W} ${pair.toY}`}
+              fill="none" stroke="#D1D5DB" strokeWidth={1.5}
+            />
+            <path
+              d={`M 0 ${pair.from[1]} L ${CONN_W / 2} ${pair.from[1]} L ${CONN_W / 2} ${pair.toY} L ${CONN_W} ${pair.toY}`}
+              fill="none" stroke="#D1D5DB" strokeWidth={1.5}
+            />
+            <circle cx={0} cy={pair.from[0]} r={2.5} fill="#D1D5DB" />
+            <circle cx={0} cy={pair.from[1]} r={2.5} fill="#D1D5DB" />
+          </g>
+        ))}
       </svg>
     </div>
   );

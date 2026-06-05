@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import MatchCard from '@/components/MatchCard';
-import { allMatches, getUniqueDates, stageNames, formatDate } from '@/data/matches';
+import { allMatches, getUniqueDates, formatDate } from '@/data/matches';
 import type { MatchStage } from '@/data/matches';
 
 /** Detect user timezone */
