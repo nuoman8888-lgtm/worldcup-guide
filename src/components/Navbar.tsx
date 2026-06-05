@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import SearchBox from './SearchBox';
 
 const navItems = [
-  { href: '/', label: '🏠 首页', icon: '🏠' },
-  { href: '/schedule', label: '📅 赛程', icon: '📅' },
-  { href: '/standings', label: '📊 积分榜', icon: '📊' },
-  { href: '/odds', label: '💰 赔率', icon: '💰' },
-  { href: '/ai', label: '🤖 AI预测', icon: '🤖' },
+  { href: '/', label: '🏠 首页' },
+  { href: '/schedule', label: '📅 赛程' },
+  { href: '/standings', label: '📊 积分榜' },
+  { href: '/odds', label: '💰 赔率' },
 ];
 
 export default function Navbar() {
@@ -42,21 +42,28 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
+            {/* Search in navbar */}
+            <div className="ml-2">
+              <SearchBox variant="navbar" />
+            </div>
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2 rounded-lg hover:bg-white/10"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {menuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
+          {/* Mobile buttons */}
+          <div className="flex items-center gap-1 md:hidden">
+            <button
+              className="p-2 rounded-lg hover:bg-white/10"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label={menuOpen ? '关闭菜单' : '打开菜单'}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {menuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
@@ -76,6 +83,10 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
+            {/* Mobile search hint */}
+            <div className="px-3 py-2.5 text-xs text-white/50">
+              🔍 返回首页搜索球队
+            </div>
           </div>
         )}
       </div>
