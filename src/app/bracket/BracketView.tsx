@@ -160,44 +160,53 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
 
   return (
     <div ref={bannerRef} className="max-w-3xl mx-auto">
-      {/* ── Champion ── */}
-      <div className="text-center mb-8">
-        <div className="text-sm text-gray-500 font-bold mb-2 tracking-widest uppercase">AI 预测冠军</div>
+      {/* ── Champion + Runner-up row ── */}
+      <div className="grid sm:grid-cols-2 gap-4 mb-8 max-w-2xl mx-auto">
+        {/* Champion */}
         {champion && (
-          <div className="inline-block rounded-2xl p-6 shadow-xl" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%)', border: '2px solid #D4AF37', minWidth: 260 }}>
-            <div className="text-5xl mb-3">{champion.team.flag}</div>
-            <div className="text-2xl font-extrabold text-navy">{champion.team.name}</div>
-            <div className="text-sm text-navy/60">{champion.team.nameEn}</div>
-            <div className="mt-2 text-3xl font-extrabold text-navy">{champion.prob}%</div>
-            <div className="text-xs text-navy/50">夺冠概率</div>
+          <div className="rounded-2xl p-5 shadow-xl flex items-center gap-5" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%)', border: '2px solid #D4AF37' }}>
+            <div className="text-6xl shrink-0">{champion.team.flag}</div>
+            <div className="min-w-0">
+              <div className="text-xs text-navy/50 font-bold tracking-widest uppercase mb-1">🏆 AI 预测冠军</div>
+              <div className="text-xl font-extrabold text-navy">{champion.team.name}</div>
+              <div className="text-xs text-navy/60">{champion.team.nameEn}</div>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-3xl font-extrabold text-navy">{champion.prob}%</span>
+                <span className="text-xs text-navy/50">夺冠概率</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Runner-up */}
+        {runnerUp && (
+          <div className="rounded-2xl p-5 shadow-md bg-white border border-gray-200 flex items-center gap-5">
+            <div className="text-5xl shrink-0">{runnerUp.team.flag}</div>
+            <div className="min-w-0">
+              <div className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-1">🥈 亚军预测</div>
+              <div className="text-lg font-extrabold text-gray-900">{runnerUp.team.name}</div>
+              <div className="text-xs text-gray-500">{runnerUp.team.nameEn}</div>
+              <div className="flex items-baseline gap-1 mt-1.5">
+                <span className="text-2xl font-extrabold text-navy">{runnerUp.prob}%</span>
+                <span className="text-xs text-gray-400">概率</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* ── Runner-up ── */}
-      {runnerUp && (
-        <div className="text-center mb-8">
-          <div className="text-sm text-gray-500 font-bold mb-3 tracking-widest uppercase">🥈 亚军预测</div>
-          <div className="inline-block rounded-2xl p-5 shadow-md bg-white border border-gray-200" style={{ minWidth: 220 }}>
-            <div className="text-4xl mb-2">{runnerUp.team.flag}</div>
-            <div className="text-xl font-extrabold text-gray-900">{runnerUp.team.name}</div>
-            <div className="text-sm text-gray-500">{runnerUp.team.nameEn}</div>
-            <div className="mt-2 text-2xl font-extrabold text-navy">{runnerUp.prob}%</div>
-            <div className="text-xs text-gray-400">亚军概率</div>
-          </div>
-        </div>
-      )}
-
       {/* ── Semi-finalists ── */}
       <div className="mb-8">
         <div className="text-center text-sm text-gray-500 font-bold mb-4 tracking-widest uppercase">🥉 四强预测</div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {results.semis.map(s => (
-            <div key={s.team.id} className="rounded-xl p-4 text-center bg-white border border-gray-200 shadow-sm">
-              <div className="text-3xl mb-1">{s.team.flag}</div>
-              <div className="font-bold text-gray-900 text-sm">{s.team.name}</div>
-              <div className="text-xs text-gray-400">{s.team.nameEn}</div>
-              <div className="mt-1.5 text-lg font-extrabold text-navy">{s.prob}%</div>
+            <div key={s.team.id} className="rounded-xl p-3 bg-white border border-gray-200 shadow-sm flex items-center gap-3">
+              <div className="text-3xl shrink-0">{s.team.flag}</div>
+              <div className="min-w-0">
+                <div className="font-bold text-gray-900 text-sm">{s.team.name}</div>
+                <div className="text-[11px] text-gray-400">{s.team.nameEn}</div>
+              </div>
+              <div className="ml-auto text-xl font-extrabold text-navy shrink-0">{s.prob}%</div>
             </div>
           ))}
         </div>
@@ -206,12 +215,15 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
       {/* ── Quarter-finalists ── */}
       <div className="mb-8">
         <div className="text-center text-sm text-gray-500 font-bold mb-4 tracking-widest uppercase">⚽ 八强预测</div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {results.quarts.map(q => (
-            <div key={q.team.id} className="rounded-xl p-3 text-center bg-white border border-gray-100 shadow-sm">
-              <div className="text-2xl mb-1">{q.team.flag}</div>
-              <div className="font-semibold text-gray-900 text-xs">{q.team.name}</div>
-              <div className="text-[11px] text-navy font-bold mt-1">{q.prob}%</div>
+            <div key={q.team.id} className="rounded-xl p-2.5 bg-white border border-gray-100 shadow-sm flex items-center gap-2.5">
+              <div className="text-2xl shrink-0">{q.team.flag}</div>
+              <div className="min-w-0">
+                <div className="font-semibold text-gray-900 text-xs">{q.team.name}</div>
+                <div className="text-[10px] text-gray-400">{q.team.nameEn}</div>
+              </div>
+              <div className="ml-auto text-sm font-extrabold text-navy shrink-0">{q.prob}%</div>
             </div>
           ))}
         </div>
