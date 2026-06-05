@@ -83,7 +83,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
 
   const inputClasses = isNavbar
     ? 'w-36 lg:w-48 pl-8 pr-3 py-1.5 text-sm rounded-lg bg-white/10 backdrop-blur border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15'
-    : 'w-full max-w-xl mx-auto pl-4 pr-10 py-3.5 text-base rounded-xl border-2 border-white/30 bg-white/15 backdrop-blur text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400';
+    : 'w-full max-w-xl mx-auto pl-12 pr-12 py-4 text-lg rounded-2xl border-2 border-white/40 bg-white/20 backdrop-blur text-white placeholder-white/50 shadow-2xl shadow-green-900/30 focus:outline-none focus:ring-4 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white/25 transition-all';
 
   return (
     <div ref={containerRef} className="relative">
@@ -91,8 +91,10 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
         <div className="relative" style={isNavbar ? {} : { width: '100%', maxWidth: '36rem' }}>
           {/* Search icon */}
           <svg
-            className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
-              isNavbar ? 'text-white/50' : 'left-4 w-5 h-5 text-white/50'
+            className={`absolute top-1/2 -translate-y-1/2 pointer-events-none ${
+              isNavbar
+                ? 'left-2.5 w-4 h-4 text-white/50'
+                : 'left-5 w-6 h-6 text-white/60'
             }`}
             fill="none"
             stroke="currentColor"
