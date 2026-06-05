@@ -434,11 +434,21 @@ function runSimulations(count: number): AggregatedResults {
   const semiRanking = rank(semiCount, 16);
   const quarterRanking = rank(quartCount, 16);
 
-  // Pick representative: simulation where the most common champion won
-  const topChampId = championRanking[0]?.team.id;
-  const representative = topChampId && champSims[topChampId]
-    ? champSims[topChampId]
-    : simulateOnce(); // fallback
+  // Pick representative: randomly weighted by champion frequency
+  // This ensures the displayed champion varies across runs while remaining
+  // statistically honest — teams that win more often appear more often.
+  const champEntries = Object.entries(champCount);
+  const totalChamps = champEntries.reduce((sum, [, c]) => sum + c, 0);
+  let roll = Math.random() * totalChamps;
+  let selectedChampId = champEntries[0]?.[0] ?? '';
+  for (const [id, c] of champEntries) {
+    roll -= c;
+    if (roll <= 0) {
+      selectedChampId = id;
+      break;
+    }
+  }
+  const representative = champSims[selectedChampId] || simulateOnce(); // fallback
 
   return {
     teams: teamsProbs,
