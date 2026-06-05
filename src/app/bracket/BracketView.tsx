@@ -161,22 +161,6 @@ export default function BracketView() {
     setSharing(false);
   }, []);
 
-  // Compute team for a feeder slot
-  function getTeamForSlot(slotId: string): Team | null {
-    if (!slotId) return null;
-    // For R16, we show the ELO-based seed since there's no real data yet
-    const topTeams = [...teams].sort((a, b) => b.elo - a.elo);
-    const slot = allSlots.find(s => s.id === slotId);
-    if (!slot) return null;
-    if (slot.round === 'r16') {
-      const picksSoFar = R16_MATCHES.filter(s => s.id < slotId).length * 2;
-      return topTeams[picksSoFar + slot.matchIndex * 2] || null;
-    }
-    // For later rounds, show picked winner
-    const winner = getWinner(slotId);
-    return winner ? teams.find(t => t.id === winner) || null : null;
-  }
-
   return (
     <div className="max-w-[1400px] mx-auto">
       {/* ═══════ Top Controls ═══════ */}
@@ -196,26 +180,23 @@ export default function BracketView() {
           </button>
         </div>
 
-        {/* Progress */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500">
+        {/* Progress — fixed widths, no overflow */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden sm:flex items-center gap-3 text-xs text-gray-500 whitespace-nowrap">
             {ROUNDS.map(r => {
               const count = r.slots.filter(s => picks[s.id]).length;
               return (
-                <span key={r.key} className={count === r.slots.length ? 'text-qualify font-semibold' : ''}>
-                  {r.title} {count}/{r.slots.length}
+                <span key={r.key} className={`w-[72px] text-center ${count === r.slots.length ? 'text-qualify font-semibold' : ''}`}>
+                  {r.title}&nbsp;{count}/{r.slots.length}
                 </span>
               );
             })}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gold rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
-            <span className="text-xs font-bold text-gray-600 tabular-nums">{progress}%</span>
+            <span className="text-xs font-bold text-gray-600 tabular-nums w-8">{progress}%</span>
           </div>
         </div>
       </div>
@@ -291,21 +272,57 @@ export default function BracketView() {
 }
 
 /* ═══════════════════════════════════
-   Bracket Tree — proper connector columns
+   Bracket Tree — SVG absolute positioning
+   R16 = baseline height, all others vertically centered
    ═══════════════════════════════════ */
 
-const CARD_H = 64;
-const GAP_SM = 6;   // gap for rounds with many cards (R16)
-const GAP_MD = 16;  // gap for medium rounds (QF)
-const GAP_LG = 36;  // gap for rounds with few cards (SF)
-const COL_W = 128;
-const CONN_W = 44;
+const CARD_W = 110;
+const CARD_H = 60;
+const FINAL_H = 78;
+const R16_GAP = 4;
+const QF_GAP = 14;
+const SF_GAP = 38;
+const COL_GAP = 52; // horizontal space between round centers (includes connector)
+const HEADER_H = 28;
 
-function getGap(count: number): number {
-  if (count <= 2) return GAP_LG;
-  if (count <= 4) return GAP_MD;
-  return GAP_SM;
+// Y positions for R16 cards (8 cards, centers)
+const R16_STEP = CARD_H + R16_GAP; // 64
+const R16_Y = Array.from({ length: 8 }, (_, i) => i * R16_STEP + CARD_H / 2);
+const R16_TOTAL_H = 8 * CARD_H + 7 * R16_GAP; // 508
+
+// Pre-compute all Y positions
+function bracketLayout() {
+  // R16: 8 cards, Y centers at 30, 94, 158, 222, 286, 350, 414, 478
+  const r16Y = Array.from({ length: 8 }, (_, i) => i * R16_STEP + CARD_H / 2);
+
+  // QF: 4 cards, each at center of R16 pair
+  const qfStep = 2 * R16_STEP; // 128
+  const qfY = Array.from({ length: 4 }, (_, i) => (r16Y[i * 2] + r16Y[i * 2 + 1]) / 2);
+  const qfTotalH = 4 * CARD_H + 3 * QF_GAP;
+
+  // SF: 2 cards, each at center of QF pair
+  const sfStep = 2 * qfStep; // 256
+  const sfY = Array.from({ length: 2 }, (_, i) => (qfY[i * 2] + qfY[i * 2 + 1]) / 2);
+  const sfTotalH = 2 * CARD_H + 1 * SF_GAP;
+
+  // Final: 1 card, center of SF pair
+  const finalY = [(sfY[0] + sfY[1]) / 2];
+  const finalTotalH = FINAL_H;
+
+  return {
+    r16: { ys: r16Y, count: 8, cardH: CARD_H, gap: R16_GAP, totalH: R16_TOTAL_H },
+    qf: { ys: qfY, count: 4, cardH: CARD_H, gap: QF_GAP, totalH: qfTotalH },
+    sf: { ys: sfY, count: 2, cardH: CARD_H, gap: SF_GAP, totalH: sfTotalH },
+    final: { ys: finalY, count: 1, cardH: FINAL_H, gap: 0, totalH: finalTotalH },
+  };
 }
+
+const LAYOUT = bracketLayout();
+const BASELINE_H = R16_TOTAL_H; // all columns use this as container height
+
+// X positions for each round (accumulated column widths + gaps)
+const ROUND_X = [0, CARD_W + COL_GAP, (CARD_W + COL_GAP) * 2, (CARD_W + COL_GAP) * 3];
+const TOTAL_W = ROUND_X[3] + CARD_W;
 
 function BracketTree({ rounds, picks, teams, onSelectSlot }: {
   rounds: typeof ROUNDS;
@@ -313,41 +330,115 @@ function BracketTree({ rounds, picks, teams, onSelectSlot }: {
   teams: Team[];
   onSelectSlot: (id: string) => void;
 }) {
+  const layoutKeys = ['r16', 'qf', 'sf', 'final'] as const;
+
   return (
-    <div className="flex justify-center min-w-[780px]">
-      {rounds.map((round, ri) => {
-        const gap = getGap(round.slots.length);
-        const isFinal = ri === 3;
-        const cardH = isFinal ? 80 : CARD_H;
+    <div className="relative mx-auto" style={{ width: TOTAL_W, height: BASELINE_H + HEADER_H }}>
+      {/* SVG connector lines — rendered first, behind cards */}
+      <svg
+        className="absolute inset-0 pointer-events-none"
+        width={TOTAL_W}
+        height={BASELINE_H + HEADER_H}
+        style={{ overflow: 'visible', zIndex: 1 }}
+      >
+        {/* R16 → QF connectors */}
+        {LAYOUT.r16.ys.map((y, i) => {
+          const pairIdx = Math.floor(i / 2);
+          const targetY = LAYOUT.qf.ys[pairIdx];
+          const x1 = ROUND_X[0] + CARD_W;
+          const x2 = ROUND_X[1];
+          const midX = (x1 + x2) / 2;
+          return (
+            <path
+              key={`r16-qf-${i}`}
+              d={`M ${x1} ${y + HEADER_H} L ${midX} ${y + HEADER_H} L ${midX} ${targetY + HEADER_H} L ${x2} ${targetY + HEADER_H}`}
+              fill="none" stroke="#CBD5E1" strokeWidth={1.5}
+            />
+          );
+        })}
+        {/* QF → SF connectors */}
+        {LAYOUT.qf.ys.map((y, i) => {
+          const pairIdx = Math.floor(i / 2);
+          const targetY = LAYOUT.sf.ys[pairIdx];
+          const x1 = ROUND_X[1] + CARD_W;
+          const x2 = ROUND_X[2];
+          const midX = (x1 + x2) / 2;
+          return (
+            <path
+              key={`qf-sf-${i}`}
+              d={`M ${x1} ${y + HEADER_H} L ${midX} ${y + HEADER_H} L ${midX} ${targetY + HEADER_H} L ${x2} ${targetY + HEADER_H}`}
+              fill="none" stroke="#CBD5E1" strokeWidth={1.5}
+            />
+          );
+        })}
+        {/* SF → Final connectors */}
+        {LAYOUT.sf.ys.map((y, i) => {
+          const targetY = LAYOUT.final.ys[0];
+          const x1 = ROUND_X[2] + CARD_W;
+          const x2 = ROUND_X[3];
+          const midX = (x1 + x2) / 2;
+          return (
+            <path
+              key={`sf-final-${i}`}
+              d={`M ${x1} ${y + HEADER_H} L ${midX} ${y + HEADER_H} L ${midX} ${targetY + HEADER_H} L ${x2} ${targetY + HEADER_H}`}
+              fill="none" stroke="#CBD5E1" strokeWidth={1.5}
+            />
+          );
+        })}
+        {/* Dots at R16 card right edges */}
+        {LAYOUT.r16.ys.map((y, i) => (
+          <circle key={`dot-r16-${i}`} cx={ROUND_X[0] + CARD_W} cy={y + HEADER_H} r={2.5} fill="#94A3B8" />
+        ))}
+        {/* Dots at QF card edges */}
+        {LAYOUT.qf.ys.flatMap((y, i) => [
+          <circle key={`dot-qf-l-${i}`} cx={ROUND_X[1]} cy={y + HEADER_H} r={2.5} fill="#94A3B8" />,
+          <circle key={`dot-qf-r-${i}`} cx={ROUND_X[1] + CARD_W} cy={y + HEADER_H} r={2.5} fill="#94A3B8" />,
+        ])}
+        {LAYOUT.sf.ys.flatMap((y, i) => [
+          <circle key={`dot-sf-l-${i}`} cx={ROUND_X[2]} cy={y + HEADER_H} r={2.5} fill="#94A3B8" />,
+          <circle key={`dot-sf-r-${i}`} cx={ROUND_X[2] + CARD_W} cy={y + HEADER_H} r={2.5} fill="#94A3B8" />,
+        ])}
+      </svg>
+
+      {/* Round columns */}
+      {layoutKeys.map((key, ri) => {
+        const layout = LAYOUT[key];
+        const round = rounds[ri];
+        const isFinal = key === 'final';
+        const cardH = layout.cardH;
+        const x = ROUND_X[ri];
+        // Vertical centering: shorter columns are centered within BASELINE_H
+        const offsetY = HEADER_H + (BASELINE_H - layout.totalH) / 2;
 
         return (
-        <div key={round.key} className="flex items-stretch">
-          {/* Round column */}
-          <div className="flex flex-col items-center" style={{ width: COL_W }}>
-            <div className="mb-3">
-              <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full ${
+          <div key={key} className="absolute" style={{ left: x, top: 0, width: CARD_W }}>
+            {/* Round title */}
+            <div className="flex justify-center" style={{ height: HEADER_H, alignItems: 'flex-end', paddingBottom: 4 }}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                 isFinal ? 'bg-gold text-navy' : 'bg-gray-100 text-gray-600'
               }`}>
                 {isFinal ? '🏆 ' : ''}{round.title}
               </span>
             </div>
 
-            <div className="flex flex-col items-center" style={{ gap }}>
+            {/* Cards positioned absolutely */}
+            <div className="relative" style={{ height: BASELINE_H }}>
               {round.slots.map((slot, si) => {
                 const winner = picks[slot.id] ? teams.find(t => t.id === picks[slot.id]) : null;
-                const isFinal = slot.round === 'final';
                 const hasFeeders = slot.feedsFrom.length > 0;
                 const feeder1 = hasFeeders && slot.feedsFrom[0] ? (picks[slot.feedsFrom[0]] ? teams.find(t => t.id === picks[slot.feedsFrom[0]]) : null) : null;
                 const feeder2 = hasFeeders && slot.feedsFrom[1] ? (picks[slot.feedsFrom[1]] ? teams.find(t => t.id === picks[slot.feedsFrom[1]]) : null) : null;
 
                 let t1 = feeder1, t2 = feeder2;
-                if (slot.round === 'r16') {
+                if (key === 'r16') {
                   const top16 = [...teams].sort((a, b) => b.elo - a.elo).slice(0, 16);
                   t1 = top16[si * 2] || null;
                   t2 = top16[si * 2 + 1] || null;
                 }
 
-                const canClick = t1 && t2 && !winner && (slot.round === 'r16' || (feeder1 && feeder2));
+                const canClick = t1 && t2 && !winner && (key === 'r16' || (feeder1 && feeder2));
+                // Y within the container: offset from vertical centering
+                const y = si * (cardH + layout.gap) - (BASELINE_H - layout.totalH) / 2;
 
                 return (
                   <button
@@ -355,7 +446,7 @@ function BracketTree({ rounds, picks, teams, onSelectSlot }: {
                     onClick={() => canClick && onSelectSlot(slot.id)}
                     disabled={!canClick}
                     className={`
-                      relative rounded-xl border px-3 py-2.5 text-center transition-all
+                      absolute left-0 right-0 rounded-xl border px-2 py-1.5 text-center transition-all
                       ${isFinal
                         ? 'border-gold bg-gradient-to-b from-yellow-50 to-white shadow-md shadow-gold/20'
                         : winner ? 'border-gray-200 bg-white shadow-sm'
@@ -363,94 +454,29 @@ function BracketTree({ rounds, picks, teams, onSelectSlot }: {
                         : 'border-gray-100 bg-gray-50'
                       }
                     `}
-                    style={{ width: 118, minHeight: isFinal ? 80 : CARD_H }}
+                    style={{ top: y, height: cardH }}
                   >
-                    {isFinal && <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xl">🏆</div>}
-                    <div className="text-[10px] text-gray-400 font-mono mb-1.5">{slot.date} {slot.time}</div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex-1 text-center min-w-0">
-                        {t1 ? (
-                          <>
-                            <div className="text-lg">{t1.flag}</div>
-                            <div className={`text-[10px] font-semibold truncate ${winner && t1.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>{t1.name}</div>
-                          </>
-                        ) : <div className="text-gray-300 text-lg">?</div>}
+                    {isFinal && <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg">🏆</div>}
+                    <div className="text-[9px] text-gray-400 font-mono mb-0.5">{slot.date} {slot.time}</div>
+                    <div className="flex items-center gap-1">
+                      <div className="flex-1 text-center min-w-0 leading-tight">
+                        {t1 ? <><div className="text-base">{t1.flag}</div><div className={`text-[9px] font-semibold truncate ${winner && t1.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>{t1.name}</div></> : <div className="text-gray-300 text-base">?</div>}
                       </div>
-                      <span className="text-[10px] text-gray-300 font-bold shrink-0">VS</span>
-                      <div className="flex-1 text-center min-w-0">
-                        {t2 ? (
-                          <>
-                            <div className="text-lg">{t2.flag}</div>
-                            <div className={`text-[10px] font-semibold truncate ${winner && t2.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>{t2.name}</div>
-                          </>
-                        ) : <div className="text-gray-300 text-lg">?</div>}
+                      <span className="text-[9px] text-gray-300 font-bold shrink-0">VS</span>
+                      <div className="flex-1 text-center min-w-0 leading-tight">
+                        {t2 ? <><div className="text-base">{t2.flag}</div><div className={`text-[9px] font-semibold truncate ${winner && t2.id === winner.id ? 'text-gold-dark' : 'text-gray-700'}`}>{t2.name}</div></> : <div className="text-gray-300 text-base">?</div>}
                       </div>
                     </div>
-                    {winner && <div className="mt-1.5 text-[10px] font-bold text-gold-dark">{winner.flag} {winner.name} 晋级</div>}
-                    {!winner && canClick && <div className="mt-1 text-[9px] text-gray-400">点击选择 →</div>}
-                    <div className="text-[8px] text-gray-400 mt-1">{slot.city}</div>
+                    {winner && <div className="mt-0.5 text-[9px] font-bold text-gold-dark leading-tight">{winner.flag} {winner.name} 晋级</div>}
+                    {!winner && canClick && <div className="mt-0.5 text-[8px] text-gray-400">点击选择 →</div>}
+                    <div className="text-[7px] text-gray-400 truncate">{slot.city}</div>
                   </button>
                 );
               })}
             </div>
           </div>
-
-          {/* Connector column */}
-          {ri < rounds.length - 1 && (
-            <BracketConnectorCol
-              fromSlots={round.slots}
-              toSlots={rounds[ri + 1].slots}
-              fromGap={gap}
-              fromCardH={cardH}
-              toGap={getGap(rounds[ri + 1].slots.length)}
-              toCardH={rounds[ri + 1].key === 'final' ? 80 : CARD_H}
-            />
-          )}
-        </div>
         );
       })}
-    </div>
-  );
-}
-
-function BracketConnectorCol({ fromSlots, toSlots, fromGap, fromCardH, toGap, toCardH }: {
-  fromSlots: Slot[]; toSlots: Slot[];
-  fromGap: number; fromCardH: number;
-  toGap: number; toCardH: number;
-}) {
-  const fromCount = fromSlots.length;
-  const toCount = toSlots.length;
-  const totalH = fromCount * fromCardH + (fromCount - 1) * fromGap;
-  const pairs: { from: [number, number]; toY: number }[] = [];
-  for (let i = 0; i < fromCount; i += 2) {
-    // Center Y of fromSlot[i] and fromSlot[i+1]
-    const y0 = i * (fromCardH + fromGap) + fromCardH / 2;
-    const y1 = y0 + fromCardH + fromGap;
-    // Center Y of target toSlot
-    const toIdx = i / 2;
-    const toSpacing = (fromCount / toCount) * (fromCardH + fromGap);
-    const targetY = toIdx * toSpacing + toSpacing / 2;
-    pairs.push({ from: [y0, y1], toY: targetY });
-  }
-
-  return (
-    <div style={{ width: CONN_W, flexShrink: 0, height: totalH, position: 'relative', marginTop: 30 }}>
-      <svg width={CONN_W} height={totalH} style={{ overflow: 'visible' }}>
-        {pairs.map((pair, pi) => (
-          <g key={pi}>
-            <path
-              d={`M 0 ${pair.from[0]} L ${CONN_W / 2} ${pair.from[0]} L ${CONN_W / 2} ${pair.toY} L ${CONN_W} ${pair.toY}`}
-              fill="none" stroke="#D1D5DB" strokeWidth={1.5}
-            />
-            <path
-              d={`M 0 ${pair.from[1]} L ${CONN_W / 2} ${pair.from[1]} L ${CONN_W / 2} ${pair.toY} L ${CONN_W} ${pair.toY}`}
-              fill="none" stroke="#D1D5DB" strokeWidth={1.5}
-            />
-            <circle cx={0} cy={pair.from[0]} r={2.5} fill="#D1D5DB" />
-            <circle cx={0} cy={pair.from[1]} r={2.5} fill="#D1D5DB" />
-          </g>
-        ))}
-      </svg>
     </div>
   );
 }
