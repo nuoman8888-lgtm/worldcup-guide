@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Bracket, Seed, SeedItem } from 'react-brackets';
 import { getAllTeams, groups } from '@/data/teams';
 import type { Team } from '@/data/teams';
@@ -461,13 +461,10 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
   const [results, setResults] = useState<AggregatedResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [runCount, setRunCount] = useState(0);
-  const [sharing, setSharing] = useState(false);
-  const bannerRef = useRef<HTMLDivElement>(null);
 
   // Run simulations on first render
   const run = useCallback(() => {
     setLoading(true);
-    // Use setTimeout so the UI can update before heavy computation
     setTimeout(() => {
       const r = runSimulations(SIM_COUNT);
       setResults(r);
@@ -479,20 +476,6 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
   // Auto-run on mount
   useEffect(() => { run(); }, [run]);
 
-  const handleShare = useCallback(async () => {
-    if (!bannerRef.current) return;
-    setSharing(true);
-    try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(bannerRef.current, { backgroundColor: '#f8fafc', scale: 2 });
-      const a = document.createElement('a');
-      a.download = 'worldcup-ai-prediction.png';
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-    } catch { /* noop */ }
-    setSharing(false);
-  }, []);
-
   if (loading || !results) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -503,76 +486,102 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
     );
   }
 
-  const { representative, championRanking, semiRanking, quarterRanking, teams } = results;
+  const { representative, championRanking, teams } = results;
   const rep = representative;
 
-  // Semi-finalists from representative (all 4)
+  // All 4 semi-finalists from the representative simulation
   const semiTeams = rep.semiFinalists;
-  // Quarter-finalists that are NOT semi-finalists (the 4 QF losers)
-  const qfOnly = rep.quarterFinalists.filter(
-    t => !semiTeams.some(s => s.id === t.id)
-  );
 
   return (
-    <div ref={bannerRef} className="max-w-3xl mx-auto">
-      {/* ── Champion Prediction ── */}
-      <div className="mb-6">
-        <div className="text-center text-sm text-gray-500 font-bold mb-3 tracking-widest uppercase">
-          🏆 冠军预测
+    <div className="max-w-lg mx-auto">
+      {/* ═══ Champion Hero Card ═══ */}
+      <div
+        className="rounded-2xl p-6 shadow-xl text-center mb-6"
+        style={{
+          background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%)',
+          border: '2px solid #D4AF37',
+        }}
+      >
+        <div className="text-xs font-bold tracking-widest uppercase text-navy/50 mb-2">
+          🏆 AI 预测冠军
         </div>
-        <div
-          className="rounded-2xl p-5 shadow-xl flex items-center gap-5 max-w-sm mx-auto"
-          style={{
-            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%)',
-            border: '2px solid #D4AF37',
-          }}
-        >
-          <div className="text-6xl shrink-0">{rep.champion.flag}</div>
-          <div className="min-w-0">
-            <div className="text-xs text-navy/50 font-bold tracking-widest uppercase mb-1">
-              AI 预测冠军
-            </div>
-            <div className="text-xl font-extrabold text-navy">{rep.champion.name}</div>
-            <div className="text-xs text-navy/60">{rep.champion.nameEn}</div>
-            <div className="flex items-baseline gap-1 mt-2">
-              <span className="text-3xl font-extrabold text-navy">
-                {teams[rep.champion.id]?.championProb ?? 0}%
-              </span>
-              <span className="text-xs text-navy/50">夺冠概率</span>
-            </div>
-          </div>
+        <div className="text-7xl mb-3">{rep.champion.flag}</div>
+        <div className="text-2xl font-extrabold text-navy mb-1">{rep.champion.name}</div>
+        <div className="text-sm text-navy/50 mb-3">{rep.champion.nameEn}</div>
+        <div className="inline-flex items-baseline gap-1.5 bg-white/60 rounded-full px-4 py-1.5">
+          <span className="text-4xl font-extrabold text-navy tabular-nums">
+            {teams[rep.champion.id]?.championProb ?? 0}%
+          </span>
+          <span className="text-sm text-navy/60 font-medium">夺冠概率</span>
         </div>
       </div>
 
-      {/* ── Runner-up Prediction ── */}
-      <div className="mb-6">
-        <div className="text-center text-sm text-gray-500 font-bold mb-3 tracking-widest uppercase">
+      {/* ═══ Champion Probability Ranking ═══ */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <span className="text-sm font-bold text-gray-700">📊 夺冠概率 TOP 10</span>
+        </div>
+        {championRanking.slice(0, 10).map((c, i) => {
+          const maxProb = championRanking[0]?.prob || 30;
+          const barWidth = Math.max(3, (c.prob / maxProb) * 100);
+          const isGold = i === 0;
+          const isSilver = i === 1;
+          const isBronze = i === 2;
+          return (
+            <div
+              key={c.team.id}
+              className={`flex items-center gap-3 px-5 py-3 ${
+                i < 9 ? 'border-b border-gray-50' : ''
+              } ${isGold ? 'bg-gold-50' : ''}`}
+            >
+              <span
+                className={`text-xs font-bold w-5 tabular-nums ${
+                  isGold ? 'text-gold' : isSilver ? 'text-gray-400' : isBronze ? 'text-amber-600' : 'text-gray-400'
+                }`}
+              >
+                {i + 1}
+              </span>
+              <span className="text-2xl shrink-0">{c.team.flag}</span>
+              <span className="font-semibold text-gray-900 text-sm flex-1 truncate">
+                {c.team.name}
+              </span>
+              <div className="hidden sm:block w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${isGold ? 'bg-gold' : 'bg-navy/60'}`}
+                  style={{ width: `${barWidth}%` }}
+                />
+              </div>
+              <span className="text-sm font-bold text-gray-700 w-14 text-right tabular-nums">
+                {c.prob}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ═══ Runner-up Card ═══ */}
+      <div className="rounded-2xl p-5 bg-white border border-gray-200 shadow-sm text-center mb-4">
+        <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-3">
           🥈 亚军预测
         </div>
-        <div className="rounded-2xl p-4 shadow-md bg-white border border-gray-200 flex items-center gap-4 max-w-sm mx-auto">
-          <div className="text-5xl shrink-0">{rep.runnerUp.flag}</div>
-          <div className="min-w-0">
-            <div className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-1">
-              预测亚军
-            </div>
-            <div className="text-lg font-extrabold text-gray-900">{rep.runnerUp.name}</div>
-            <div className="text-xs text-gray-500">{rep.runnerUp.nameEn}</div>
-            <div className="flex items-baseline gap-1 mt-1.5">
-              <span className="text-2xl font-extrabold text-navy">
-                {teams[rep.runnerUp.id]?.runnerUpProb ?? 0}%
-              </span>
-              <span className="text-xs text-gray-400">亚军概率</span>
-            </div>
-          </div>
+        <div className="text-5xl mb-2">{rep.runnerUp.flag}</div>
+        <div className="text-lg font-extrabold text-gray-900 mb-0.5">{rep.runnerUp.name}</div>
+        <div className="text-xs text-gray-400 mb-2">{rep.runnerUp.nameEn}</div>
+        <div className="inline-flex items-baseline gap-1">
+          <span className="text-2xl font-extrabold text-navy tabular-nums">
+            {teams[rep.runnerUp.id]?.runnerUpProb ?? 0}%
+          </span>
+          <span className="text-xs text-gray-400">亚军概率</span>
         </div>
       </div>
 
-      {/* ── Semi-final Prediction ── */}
-      <div className="mb-6">
-        <div className="text-center text-sm text-gray-500 font-bold mb-3 tracking-widest uppercase">
-          🥉 四强预测
+      {/* ═══ Semi-final Card ═══ */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <span className="text-sm font-bold text-gray-700">🥉 四强预测</span>
+          <span className="text-[11px] text-gray-400 ml-2">同一轮模拟结果</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 divide-x divide-gray-100">
           {semiTeams.map((team, i) => {
             const probs = teams[team.id];
             const isChamp = team.id === rep.champion.id;
@@ -580,142 +589,61 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
             return (
               <div
                 key={team.id}
-                className={`rounded-xl p-3 shadow-sm flex flex-col items-center text-center gap-1.5 ${
-                  isChamp
-                    ? 'bg-gold-50 border-2 border-gold'
-                    : isRunner
-                    ? 'bg-gray-50 border border-gray-300'
-                    : 'bg-white border border-gray-200'
+                className={`flex items-center gap-3 px-4 py-3.5 ${
+                  i > 1 ? 'border-t border-gray-100' : ''
                 }`}
               >
-                <div className="text-3xl">{team.flag}</div>
-                <div className="font-bold text-gray-900 text-sm leading-tight">{team.name}</div>
-                <div className="text-[11px] text-gray-400">{team.nameEn}</div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  {isChamp ? '🏆 冠军' : isRunner ? '🥈 亚军' : '🥉 四强'}
+                <span className="text-3xl shrink-0">{team.flag}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-gray-900 text-sm">{team.name}</span>
+                    {isChamp && <span className="text-[10px] bg-gold/20 text-gold-dark px-1.5 py-0.5 rounded-full font-bold">冠军</span>}
+                    {isRunner && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-bold">亚军</span>}
+                  </div>
+                  <div className="text-[11px] text-gray-400">{team.nameEn}</div>
                 </div>
-                <div className="text-lg font-extrabold text-navy">
-                  {probs?.semiProb ?? 0}%
+                <div className="ml-auto text-right shrink-0">
+                  <div className="text-lg font-extrabold text-navy tabular-nums">
+                    {probs?.semiProb ?? 0}%
+                  </div>
+                  <div className="text-[10px] text-gray-400">四强率</div>
                 </div>
-                <div className="text-[10px] text-gray-400 -mt-1">四强概率</div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* ── Quarter-final Prediction ── */}
-      <div className="mb-6">
-        <div className="text-center text-sm text-gray-500 font-bold mb-3 tracking-widest uppercase">
-          ⚽ 八强预测
+      {/* ═══ Quarter-final Card ═══ */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <span className="text-sm font-bold text-gray-700">⚽ 八强预测</span>
+          <span className="text-[11px] text-gray-400 ml-2">含四强4队 + 八强4队</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {qfOnly.map(team => {
+        <div className="divide-y divide-gray-50">
+          {rep.quarterFinalists.map((team) => {
             const probs = teams[team.id];
+            const isSemi = semiTeams.some(s => s.id === team.id);
             return (
               <div
                 key={team.id}
-                className="rounded-xl p-2.5 bg-white border border-gray-100 shadow-sm flex items-center gap-2.5"
+                className={`flex items-center gap-3 px-4 py-3 ${isSemi ? 'bg-gray-50/50' : ''}`}
               >
-                <div className="text-2xl shrink-0">{team.flag}</div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-gray-900 text-xs">{team.name}</div>
-                  <div className="text-[10px] text-gray-400">{team.nameEn}</div>
+                <span className="text-2xl shrink-0">{team.flag}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-gray-900 text-sm">{team.name}</div>
+                  <div className="text-[11px] text-gray-400">{team.nameEn}</div>
                 </div>
-                <div className="ml-auto text-sm font-extrabold text-navy shrink-0">
-                  {probs?.quarterProb ?? 0}%
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-center text-[11px] text-gray-400 mt-2">
-          * 四强球队也是八强，此处仅展示八强中未进入四强的 4 队
-        </p>
-      </div>
-
-      {/* ── Champion Probability TOP 10 ── */}
-      <div className="mb-8">
-        <div className="text-center text-sm text-gray-500 font-bold mb-3 tracking-widest uppercase">
-          📊 夺冠概率排行榜 TOP 10
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden max-w-md mx-auto">
-          {championRanking.slice(0, 10).map((c, i) => {
-            const t = teams[c.team.id];
-            const maxProb = championRanking[0]?.prob || 30;
-            const barWidth = Math.max(4, (c.prob / maxProb) * 100);
-            return (
-              <div
-                key={c.team.id}
-                className={`flex items-center gap-3 px-5 py-3 ${
-                  i < 9 ? 'border-b border-gray-100' : ''
-                } ${i === 0 ? 'bg-gold-50' : ''}`}
-              >
-                <span
-                  className={`text-xs font-bold w-6 ${
-                    i === 0 ? 'text-gold' : i < 3 ? 'text-gray-600' : 'text-gray-400'
-                  }`}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-xl">{c.team.flag}</span>
-                <span className="font-semibold text-gray-900 text-sm flex-1">
-                  {c.team.name}
-                </span>
-                <div className="hidden sm:block w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${
-                      i === 0 ? 'bg-gold' : 'bg-navy'
-                    }`}
-                    style={{ width: `${barWidth}%` }}
-                  />
-                </div>
-                <span className="text-sm font-bold text-gray-700 w-14 text-right tabular-nums">
-                  {c.prob}%
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Detailed Probability Table ── */}
-      <div className="mb-8">
-        <div className="text-center text-sm text-gray-500 font-bold mb-3 tracking-widest uppercase">
-          📋 各阶段概率详情
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="grid grid-cols-5 gap-1 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wide">
-            <div className="col-span-2">球队</div>
-            <div className="text-center">🏆 冠军</div>
-            <div className="text-center">🥈 亚军</div>
-            <div className="text-center">🥉 四强</div>
-          </div>
-          {championRanking.slice(0, 16).map((c, i) => {
-            const t = teams[c.team.id];
-            return (
-              <div
-                key={c.team.id}
-                className={`grid grid-cols-5 gap-1 px-4 py-2.5 items-center ${
-                  i < 15 ? 'border-b border-gray-50' : ''
-                } ${i === 0 ? 'bg-gold-50' : i % 2 === 1 ? 'bg-gray-50/50' : ''}`}
-              >
-                <div className="text-xs font-bold text-gray-400 w-5">{i + 1}</div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-lg shrink-0">{c.team.flag}</span>
-                  <span className="font-semibold text-gray-900 text-xs truncate">
-                    {c.team.name}
+                {isSemi && (
+                  <span className="text-[10px] bg-navy/10 text-navy px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                    四强
                   </span>
-                </div>
-                <div className="text-center text-sm font-bold text-navy tabular-nums">
-                  {t?.championProb ?? 0}%
-                </div>
-                <div className="text-center text-sm text-gray-600 tabular-nums">
-                  {t?.runnerUpProb ?? 0}%
-                </div>
-                <div className="text-center text-sm text-gray-600 tabular-nums">
-                  {t?.semiProb ?? 0}%
+                )}
+                <div className="text-right shrink-0 ml-2">
+                  <div className="text-base font-extrabold text-navy tabular-nums">
+                    {probs?.quarterProb ?? 0}%
+                  </div>
+                  <div className="text-[10px] text-gray-400">八强率</div>
                 </div>
               </div>
             );
@@ -723,32 +651,25 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
         </div>
       </div>
 
-      {/* ── Actions ── */}
-      <div className="flex justify-center gap-3 mb-6">
+      {/* ═══ Actions ═══ */}
+      <div className="flex flex-col sm:flex-row justify-center gap-3 mb-6">
         <button
           onClick={run}
           disabled={loading}
-          className="px-6 py-2.5 bg-navy text-white rounded-xl text-sm font-bold hover:bg-navy-light transition-colors shadow-sm disabled:opacity-50"
+          className="px-6 py-3 bg-navy text-white rounded-xl text-sm font-bold hover:bg-navy-light transition-colors shadow-sm disabled:opacity-50"
         >
-          🔄 重新预测
-        </button>
-        <button
-          onClick={handleShare}
-          disabled={sharing}
-          className="px-6 py-2.5 bg-white text-gray-700 rounded-xl text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
-        >
-          {sharing ? '生成中...' : '📸 分享'}
+          🔄 重新 AI 预测
         </button>
         <button
           onClick={onManual}
-          className="px-6 py-2.5 bg-white text-navy rounded-xl text-sm font-medium border border-navy/20 hover:bg-navy/5 transition-colors"
+          className="px-6 py-3 bg-white text-navy rounded-xl text-sm font-bold border-2 border-navy/15 hover:bg-navy/5 transition-colors"
         >
-          ✋ 手动预测淘汰赛 →
+          ✋ 手动模拟淘汰赛 →
         </button>
       </div>
 
-      <p className="text-center text-xs text-gray-400">
-        基于 {results.totalSims.toLocaleString()} 次蒙特卡洛模拟（含完整小组赛+淘汰赛）
+      <p className="text-center text-xs text-gray-400 pb-4">
+        基于 {results.totalSims.toLocaleString()} 次蒙特卡洛模拟（完整小组赛 + 淘汰赛推演）
         {runCount > 1 && <span className="text-gray-300"> · 已运行 {runCount} 次</span>}
       </p>
     </div>
