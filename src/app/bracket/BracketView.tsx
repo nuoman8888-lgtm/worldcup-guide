@@ -89,21 +89,21 @@ const MatchCard = memo(function MatchCard({
         style={{
           background: isFinal
             ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
-            : s.winner ? '#f8fafc' : '#ffffff',
+            : s.winner ? '#f1f5f9' : '#ffffff',
           border: isFinal
-            ? '2px solid #D4AF37'
-            : s.winner ? '1px solid #e2e8f0' : '1px solid #e2e8f0',
+            ? '2.5px solid #D4AF37'
+            : s.winner ? '1px solid #cbd5e1' : '1px solid #cbd5e1',
           borderRadius: 16,
           boxShadow: isFinal
-            ? '0 8px 24px rgba(212,175,55,0.2)'
-            : '0 4px 12px rgba(0,0,0,0.06)',
+            ? '0 8px 32px rgba(212,175,55,0.25)'
+            : '0 2px 8px rgba(0,0,0,0.08)',
           padding: 0,
-          minWidth: 148,
+          minWidth: 150,
           transition: 'box-shadow 0.2s, transform 0.2s',
         }}
       >
         {/* Date + City bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px 0', fontSize: 10, color: '#94a3b8', fontFamily: 'monospace' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px 0', fontSize: 10, color: '#64748b', fontFamily: 'monospace', fontWeight: 500 }}>
           <span>{s.date}</span>
           <span>{s.city}</span>
         </div>
@@ -118,16 +118,16 @@ const MatchCard = memo(function MatchCard({
               }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '6px 10px', marginBottom: ti === 0 ? 3 : 0,
+                padding: '6px 10px', marginBottom: ti === 0 ? 4 : 0,
                 cursor: s.canClick && team.id ? 'pointer' : 'default',
                 borderRadius: 10,
                 background: team.winner
-                  ? 'linear-gradient(135deg, #fef3c7, #fef9c3)'
-                  : s.canClick && team.id ? '#f8fafc' : 'transparent',
-                fontWeight: team.winner ? 700 : 400,
-                color: team.winner ? '#B8860B' : team.name === '待定' ? '#cbd5e1' : '#1e293b',
+                  ? 'linear-gradient(135deg, #fde68a, #fef3c7)'
+                  : s.canClick && team.id ? '#f1f5f9' : 'transparent',
+                fontWeight: team.winner ? 700 : 500,
+                color: team.winner ? '#92400e' : team.name === '待定' ? '#94a3b8' : '#0f172a',
                 transition: 'all 0.15s',
-                border: team.winner ? '1px solid #D4AF37' : '1px solid transparent',
+                border: team.winner ? '1.5px solid #D4AF37' : '1px solid transparent',
               }}
               onMouseEnter={e => {
                 if (s.canClick && team.id && !team.winner)
@@ -142,13 +142,13 @@ const MatchCard = memo(function MatchCard({
                 {team.flag}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <SeedTeam style={{ fontSize: 12, fontWeight: team.winner ? 700 : 500 }}>
+                <SeedTeam style={{ fontSize: 13, fontWeight: team.winner ? 700 : 600, color: team.winner ? '#92400e' : team.name === '待定' ? '#94a3b8' : '#0f172a' }}>
                   {team.name}
                 </SeedTeam>
               </div>
               {team.winner && <span style={{ fontSize: 16, color: '#D4AF37' }}>✓</span>}
               {s.canClick && !s.winner && team.id && !team.winner && (
-                <span style={{ fontSize: 10, color: '#cbd5e1' }}>选</span>
+                <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>选</span>
               )}
             </div>
           ))}
@@ -156,7 +156,7 @@ const MatchCard = memo(function MatchCard({
 
         {/* Winner indicator */}
         {s.winner && (
-          <div style={{ textAlign: 'center', padding: '0 12px 10px', fontSize: 11, fontWeight: 700, color: '#B8860B' }}>
+          <div style={{ textAlign: 'center', padding: '0 12px 10px', fontSize: 11, fontWeight: 700, color: '#92400e' }}>
             {s.winner.flag} {s.winner.name} 晋级
           </div>
         )}
@@ -340,6 +340,20 @@ export default function BracketView() {
         <div className="inline-block">
           <Bracket
             rounds={rounds as any}
+            roundTitleComponent={(title: string, _idx: number) => (
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                <span style={{
+                  fontSize: 14, fontWeight: 800, color: '#0f172a',
+                  letterSpacing: '0.05em',
+                  padding: '4px 14px',
+                  borderRadius: 20,
+                  background: title === '决赛' ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : '#e2e8f0',
+                  border: title === '决赛' ? '1px solid #D4AF37' : 'none',
+                }}>
+                  {title === '决赛' ? '🏆 ' : ''}{title}
+                </span>
+              </div>
+            )}
             renderSeedComponent={({ seed }: any) => (
               <MatchCard seed={seed as SeedData} onPick={pick} />
             )}
