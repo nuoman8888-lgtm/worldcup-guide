@@ -21,11 +21,12 @@ function timeTag(time: string): { label: string; className: string } {
   return { label: '凌晨', className: 'text-red-600 bg-red-50' };
 }
 
-export default function MatchCard({ match }: { match: Match }) {
+export default function MatchCard({ match, localTime }: { match: Match; localTime?: string }) {
   const homeTeam = match.homeTeamId !== 'TBD' ? getTeam(match.homeTeamId) : null;
   const awayTeam = match.awayTeamId !== 'TBD' ? getTeam(match.awayTeamId) : null;
   const stageBadge = stageLabels[match.stage];
   const tag = timeTag(match.time);
+  const displayTime = localTime || match.time;
 
   return (
     <Link
@@ -51,7 +52,8 @@ export default function MatchCard({ match }: { match: Match }) {
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400 font-mono">{match.time}</span>
+        <span className="text-xs text-gray-400 font-mono">{displayTime}</span>
+          {localTime && <span className="text-[10px] text-gray-400 ml-1">本地</span>}
       </div>
 
       {/* Teams */}

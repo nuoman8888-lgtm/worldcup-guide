@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { getAllTeams } from '@/data/teams';
 import type { Team } from '@/data/teams';
 
@@ -72,7 +72,31 @@ const ROUND_NAMES: Record<string, string> = {
 export default function BracketView() {
   const [picks, setPicks] = useState<Picks>({});
   const [selectingSlot, setSelectingSlot] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
   const teams = getAllTeams();
+
+  const handleShare = useCallback(async () => {
+    if (!bannerRef.current) return;
+    setSharing(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(bannerRef.current, {
+        backgroundColor: '#0F1B2D',
+        scale: 2,
+        useCORS: true,
+      });
+      // Create download link
+      const link = document.createElement('a');
+      link.download = 'my-worldcup-2026-prediction.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      console.error('Share failed:', e);
+      alert('生成图片失败，请重试');
+    }
+    setSharing(false);
+  }, []);
 
   // Get winner for a slot (either picked, or derived from feeder slots)
   function getWinner(slotId: string): Team | null {
@@ -140,31 +164,51 @@ export default function BracketView() {
         </div>
       )}
 
-      {/* Champion banner */}
+      {/* Champion banner — shared card */}
       {hasChampion && champion && (
-        <div className="mb-6 p-6 bg-gradient-to-r from-gold to-yellow-400 rounded-xl text-center shadow-lg">
-          <div className="text-sm text-navy font-bold mb-1">🏆 你的预测冠军</div>
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-5xl">{champion.flag}</span>
-            <div>
-              <div className="text-3xl font-extrabold text-navy">{champion.name}</div>
-              <div className="text-sm text-navy/70">{champion.nameEn}</div>
+        <div
+          ref={bannerRef}
+          className="mb-6 p-6 bg-gradient-to-br from-navy to-navy-light rounded-xl text-center shadow-2xl"
+          style={{ minHeight: 200 }}
+        >
+          <div className="text-xs text-gold font-bold mb-2 tracking-widest uppercase">FIFA WORLD CUP 2026</div>
+          <div className="text-2xl font-extrabold text-white mb-4">🏆 我的世界杯预测</div>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <span className="text-6xl drop-shadow-lg">{champion.flag}</span>
+            <div className="text-left">
+              <div className="text-3xl font-extrabold text-gold">{champion.name}</div>
+              <div className="text-lg text-white/70">{champion.nameEn}</div>
+              <div className="text-sm text-white/50 mt-1">FIFA #{champion.fifaRank} · ELO {champion.elo}</div>
             </div>
           </div>
-          <div className="flex justify-center gap-2 mt-4">
-            <button
-              onClick={() => setPicks({})}
-              className="px-4 py-2 bg-navy text-white rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
-            >
-              🔄 重新预测
-            </button>
-            <button
-              className="px-4 py-2 bg-white text-navy rounded-lg text-sm font-medium border border-navy/20 hover:bg-gray-50 transition-colors"
-              title="图片分享功能即将上线"
-            >
-              📸 保存分享
-            </button>
-          </div>
+          {/* Runner-up (SF loser with highest ELO) */}
+          {(() => {
+            const sf1 = bracketSlots.find(s => s.id === 'sf-1');
+            const sf2 = bracketSlots.find(s => s.id === 'sf-2');
+            const sf1Loser = sf1 && picks[sf1.id] ? (teams.find(t => t.id !== picks[sf1.id] && (getWinner(sf1.feedsFrom[0])?.id === t.id || getWinner(sf1.feedsFrom[1])?.id === t.id))) : null;
+            const sf2Loser = sf2 && picks[sf2.id] ? (teams.find(t => t.id !== picks[sf2.id] && (getWinner(sf2.feedsFrom[0])?.id === t.id || getWinner(sf2.feedsFrom[1])?.id === t.id))) : null;
+            return null; // Keep it simple for the share card
+          })()}
+          <div className="text-xs text-white/40 mt-3">worldcup-guide.pages.dev</div>
+        </div>
+      )}
+
+      {/* Share button row */}
+      {hasChampion && champion && (
+        <div className="flex justify-center gap-2 mb-6">
+          <button
+            onClick={() => setPicks({})}
+            className="px-4 py-2 bg-white text-navy rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors"
+          >
+            🔄 重新预测
+          </button>
+          <button
+            onClick={handleShare}
+            disabled={sharing}
+            className="px-5 py-2 bg-gold text-navy rounded-lg text-sm font-bold hover:bg-yellow-400 transition-colors shadow-md disabled:opacity-50"
+          >
+            {sharing ? '⏳ 生成中...' : '📸 保存图片分享'}
+          </button>
         </div>
       )}
 

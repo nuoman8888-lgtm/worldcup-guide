@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { getAllTeams } from '@/data/teams';
+import { getAllTeams, getTeam as getTeamById } from '@/data/teams';
 import { getMatchesByTeam } from '@/data/matches';
+import { searchPlayers } from '@/data/players';
 
 interface SearchBoxProps {
   variant?: 'navbar' | 'hero';
@@ -19,16 +20,19 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
   const teams = useMemo(() => getAllTeams(), []);
 
   const results = useMemo(() => {
-    if (!query.trim()) return [];
+    if (!query.trim()) return { teams: [] as typeof teams, players: [] as ReturnType<typeof searchPlayers> };
     const q = query.toLowerCase().trim();
-    return teams
-      .filter(
-        t =>
-          t.name.includes(q) ||
-          t.nameEn.toLowerCase().includes(q) ||
-          t.group.toLowerCase() === q
-      )
-      .slice(0, 8);
+    return {
+      teams: teams
+        .filter(
+          t =>
+            t.name.includes(q) ||
+            t.nameEn.toLowerCase().includes(q) ||
+            t.group.toLowerCase() === q
+        )
+        .slice(0, 5),
+      players: searchPlayers(q).slice(0, 5),
+    };
   }, [query, teams]);
 
   useEffect(() => {
@@ -37,10 +41,11 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
         setOpen(false);
         inputRef.current?.blur();
       }
-      if (!open || results.length === 0) return;
+      const totalResults = results.teams.length + results.players.length;
+      if (!open || totalResults === 0) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setActiveIndex(i => Math.min(i + 1, results.length - 1));
+        setActiveIndex(i => Math.min(i + 1, totalResults - 1));
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -48,12 +53,18 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
       }
       if (e.key === 'Enter' && activeIndex >= 0) {
         e.preventDefault();
-        const team = results[activeIndex];
-        if (team) {
-          window.location.href = `/team/${team.id}`;
-          setOpen(false);
-          setQuery('');
+        // Navigate to first matching result
+        const allResults = [...results.players, ...results.teams];
+        const item = allResults[activeIndex];
+        if (item && 'teamId' in item) {
+          // Player result
+          window.location.href = `/team/${item.teamId}`;
+        } else if (item && 'group' in item) {
+          // Team result
+          window.location.href = `/team/${item.id}`;
         }
+        setOpen(false);
+        setQuery('');
       }
     };
     document.addEventListener('keydown', handler);
@@ -144,51 +155,91 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                 : 'left-1/2 -translate-x-1/2 mt-2 w-[calc(100%-2rem)] max-w-xl'
             }`}
           >
-            {results.length > 0 ? (
-              <div className="py-1 max-h-96 overflow-y-auto">
-                {results.map((team, idx) => {
-                  const teamMatches = getMatchesByTeam(team.id);
-                  const upcoming = teamMatches
-                    .filter(m => m.status !== 'finished')
-                    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0];
-
-                  return (
-                    <Link
-                      key={team.id}
-                      href={`/team/${team.id}`}
-                      onClick={() => {
-                        setOpen(false);
-                        setQuery('');
-                      }}
-                      className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${
-                        idx === activeIndex ? 'bg-gold-50' : ''
-                      }`}
-                    >
-                      <span className="text-2xl shrink-0">{team.flag}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 text-sm">
-                          {team.name}
-                          <span className="text-xs text-gray-400 font-normal ml-1.5">{team.nameEn}</span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {team.group}组 · FIFA #{team.fifaRank} · ELO {team.elo}
-                        </div>
-                        {upcoming && (
-                          <div className="text-xs text-gold-dark mt-0.5 font-medium">
-                            📅 下场: {upcoming.date} {upcoming.time}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-gray-300 text-sm shrink-0">→</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
+            {results.teams.length === 0 && results.players.length === 0 ? (
               <div className="p-6 text-center">
                 <div className="text-2xl mb-2">🔍</div>
-                <p className="text-gray-500 text-sm">未找到 &ldquo;{query}&rdquo; 相关的球队</p>
-                <p className="text-gray-400 text-xs mt-1">试试中文名或英文名，如：日本、Brazil</p>
+                <p className="text-gray-500 text-sm">未找到 &ldquo;{query}&rdquo; 相关结果</p>
+                <p className="text-gray-400 text-xs mt-1">试试中文名或英文名，如：日本、Brazil、梅西、Mbappe</p>
+              </div>
+            ) : (
+              <div className="py-1 max-h-96 overflow-y-auto">
+                {/* Player results first */}
+                {results.players.length > 0 && (
+                  <>
+                    <div className="px-4 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                      ⭐ 球星
+                    </div>
+                    {results.players.map((p, idx) => {
+                      const team = getTeamById(p.teamId);
+                      const posColors: Record<string, string> = { FW: 'text-red-600 bg-red-50', MF: 'text-blue-600 bg-blue-50', DF: 'text-green-600 bg-green-50', GK: 'text-yellow-600 bg-yellow-50' };
+                      return (
+                        <div
+                          key={p.id}
+                          className={`flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors ${
+                            idx === activeIndex ? 'bg-gold-50' : ''
+                          }`}
+                        >
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${posColors[p.position] || 'bg-gray-100 text-gray-600'}`}>
+                            {p.nameEn.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-900 text-sm">
+                              {p.name}
+                              <span className="text-[10px] text-gray-400 font-normal ml-1">{p.nameEn}</span>
+                            </div>
+                            <div className="text-[10px] text-gray-500">
+                              {p.position} · {team?.flag} {team?.name} · {p.appearances}场{p.goals}球 · {p.marketValue}
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-400">→</span>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* Team results */}
+                {results.teams.length > 0 && (
+                  <>
+                    <div className="px-4 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                      🏳️ 球队
+                    </div>
+                    {results.teams.map((team, idx) => {
+                      const teamMatches = getMatchesByTeam(team.id);
+                      const upcoming = teamMatches
+                        .filter(m => m.status !== 'finished')
+                        .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0];
+
+                      return (
+                        <Link
+                          key={team.id}
+                          href={`/team/${team.id}`}
+                          onClick={() => { setOpen(false); setQuery(''); }}
+                          className={`flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors ${
+                            idx + results.players.length === activeIndex ? 'bg-gold-50' : ''
+                          }`}
+                        >
+                          <span className="text-2xl shrink-0">{team.flag}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-900 text-sm">
+                              {team.name}
+                              <span className="text-xs text-gray-400 font-normal ml-1.5">{team.nameEn}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {team.group}组 · FIFA #{team.fifaRank} · ELO {team.elo}
+                            </div>
+                            {upcoming && (
+                              <div className="text-xs text-gold-dark mt-0.5 font-medium">
+                                📅 下场: {upcoming.date} {upcoming.time}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-gray-300 text-sm shrink-0">→</span>
+                        </Link>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
           </div>

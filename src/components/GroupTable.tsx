@@ -2,6 +2,21 @@ import Link from 'next/link';
 import { getTeam } from '@/data/teams';
 import type { GroupStandings } from '@/data/standings';
 
+/** Compute qualification probability based on ELO + odds within group */
+function computeQualProb(teamId: string, standings: { teamId: string }[], groupName: string): number {
+  const groupTeams = standings.map(s => getTeam(s.teamId)).filter(Boolean);
+  const team = getTeam(teamId);
+  if (!team || groupTeams.length === 0) return 50;
+
+  const totalElo = groupTeams.reduce((s, t) => s + (t?.elo || 1500), 0);
+  const eloShare = team.elo / totalElo;
+  const oddsBonus = Math.max(0.5, Math.min(3, 2 / (team.groupStageOdds || 2)));
+
+  // Blend: ELO weight + odds weight, normalize to ~250% total (2 direct + potential 3rd)
+  const raw = (eloShare * 180 + oddsBonus * 70);
+  return Math.round(Math.min(98, Math.max(2, raw)));
+}
+
 export default function GroupTable({ data, compact = false }: { data: GroupStandings; compact?: boolean }) {
   if (compact) {
     return (
@@ -61,6 +76,7 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
               <th className="text-center py-2.5 hidden sm:table-cell">进/失</th>
               <th className="text-center py-2.5 hidden sm:table-cell w-10">净胜</th>
               <th className="text-center py-2.5 pr-5 w-10 font-semibold">分</th>
+              <th className="text-center py-2.5 pr-3 w-14 font-semibold">出线%</th>
             </tr>
           </thead>
           <tbody>
@@ -117,6 +133,28 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
                     </span>
                   </td>
                   <td className="text-center py-3 pr-5 font-bold text-gray-900 tabular-nums">{row.points}</td>
+                  <td className="text-center py-3 pr-3">
+                    {(() => {
+                      const prob = computeQualProb(row.teamId, data.standings, data.groupName);
+                      return (
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <div className="w-10 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                prob >= 80 ? 'bg-qualify' : prob >= 50 ? 'bg-playoff' : 'bg-gray-300'
+                              }`}
+                              style={{ width: `${prob}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-bold tabular-nums ${
+                            prob >= 80 ? 'text-qualify' : prob >= 50 ? 'text-playoff' : 'text-gray-500'
+                          }`}>
+                            {prob}%
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </td>
                 </tr>
               );
             })}

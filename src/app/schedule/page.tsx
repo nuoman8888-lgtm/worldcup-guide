@@ -1,10 +1,24 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import MatchCard from '@/components/MatchCard';
 import { allMatches, getUniqueDates, stageNames, formatDate } from '@/data/matches';
 import type { MatchStage } from '@/data/matches';
-import TeamBadge from '@/components/TeamBadge';
+
+/** Detect user timezone */
+function getUserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch { return 'Asia/Shanghai'; }
+}
+
+/** Convert Beijing time (HH:MM) to local time string */
+function toLocalTime(beijingTime: string): string {
+  const [h, m] = beijingTime.split(':').map(Number);
+  // Create a date in Beijing timezone
+  const bj = new Date(`2026-06-12T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00+08:00`);
+  return bj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
 
 const STAGES: { value: MatchStage | 'all'; label: string }[] = [
   { value: 'all', label: '全部比赛' },
@@ -40,11 +54,35 @@ export default function SchedulePage() {
     return matches;
   };
 
+  const [showLocalTime, setShowLocalTime] = useState(false);
+  const [userTz, setUserTz] = useState('');
+
+  useEffect(() => {
+    setUserTz(getUserTimezone());
+  }, []);
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 完整赛程</h1>
-        <p className="text-gray-500 text-sm">共104场比赛 · 小组赛72场 + 淘汰赛32场</p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">📅 完整赛程</h1>
+            <p className="text-gray-500 text-sm">共104场比赛 · 小组赛72场 + 淘汰赛32场</p>
+          </div>
+          {userTz && userTz !== 'Asia/Shanghai' && (
+            <button
+              onClick={() => setShowLocalTime(!showLocalTime)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showLocalTime
+                  ? 'bg-navy text-white'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              🕐 {showLocalTime ? '本地时间' : '北京时间 (UTC+8)'}
+              <span className="text-xs ml-1 opacity-70">{showLocalTime ? '✓' : '→ 切换'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stage Filter */}
@@ -107,7 +145,7 @@ export default function SchedulePage() {
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {matches.map(match => (
-                  <MatchCard key={match.id} match={match} />
+                  <MatchCard key={match.id} match={match} localTime={showLocalTime ? toLocalTime(match.time) : undefined} />
                 ))}
               </div>
             </div>
