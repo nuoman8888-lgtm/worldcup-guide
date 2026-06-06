@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Bracket, Seed, SeedItem } from 'react-brackets';
 import { getAllTeams, groups } from '@/data/teams';
+import { encodeShareData, getShareUrl } from '@/lib/share-utils';
 import type { Team } from '@/data/teams';
 
 const teams = getAllTeams();
@@ -981,6 +982,9 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
   // ── Mobile accordion state ──
   const [mobileSection, setMobileSection] = useState<SectionId | null>(null);
 
+  // ── Share state ──
+  const [shareCopied, setShareCopied] = useState(false);
+
   const expandedSet = useMemo(() => {
     if (mobileSection !== null) return new Set<SectionId>([mobileSection]);
     return computeCurrentStage(picks);
@@ -1081,7 +1085,7 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
       {/* Champion */}
       {champion && (
         <div
-          className="mb-6 rounded-xl p-4 text-center max-w-sm mx-auto"
+          className="mb-4 rounded-xl p-4 text-center max-w-sm mx-auto"
           style={{
             background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
             border: '2px solid #D4AF37',
@@ -1090,6 +1094,38 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
           <div className="text-lg font-extrabold text-navy">
             🏆 {champion.flag} {champion.name}
           </div>
+        </div>
+      )}
+
+      {/* Share button — only when 100% complete */}
+      {filled === total && (
+        <div className="mb-6 text-center">
+          <button
+            onClick={async () => {
+              const encoded = encodeShareData(picks);
+              const url = getShareUrl(encoded);
+              try {
+                await navigator.clipboard.writeText(url);
+              } catch {
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+              }
+              setShareCopied(true);
+              setTimeout(() => setShareCopied(false), 2000);
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-navy to-navy-light text-white rounded-xl text-sm font-bold hover:shadow-lg transition-all shadow-sm"
+          >
+            {shareCopied ? '✅ 链接已复制！' : '📤 分享我的预测'}
+          </button>
+          {shareCopied && (
+            <p className="text-xs text-green-600 mt-2 font-medium">
+              链接已复制到剪贴板，发送给朋友即可
+            </p>
+          )}
         </div>
       )}
 
