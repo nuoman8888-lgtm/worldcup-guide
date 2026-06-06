@@ -169,7 +169,7 @@ export default function HomePage() {
                         {i + 1}
                       </span>
                       <CountryCodeBadge teamId={item.teamId} />
-                      <span className="font-semibold text-gray-900 text-sm flex-1">{team.name}</span>
+                      <span className="font-semibold text-gray-900 text-sm flex-1 truncate">{team.name}</span>
                       <span className="font-bold text-sm text-gray-900 tabular-nums">{item.odds['Bet365']}</span>
                       <span className="text-gray-300 text-xs group-hover:text-gold transition-colors">→</span>
                     </Link>

@@ -59,7 +59,7 @@ export default function OddsPage() {
                       <Link href={`/team/${team.id}`} className="flex items-center gap-2 hover:text-gold-dark transition-colors">
                         <CountryCodeBadge teamId={item.teamId} />
                         <div>
-                          <div className="font-semibold text-gray-900">{team.name}</div>
+                          <div className="font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-none">{team.name}</div>
                           <div className="text-xs text-gray-400">{team.nameEn}</div>
                         </div>
                       </Link>

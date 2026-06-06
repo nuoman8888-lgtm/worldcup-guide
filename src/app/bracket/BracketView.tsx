@@ -841,7 +841,7 @@ function MobileMatchCard({
         <span className="text-2xl mb-1">
           {team.flag !== '?' ? team.flag : '❓'}
         </span>
-        <span className={`text-xs font-semibold text-center leading-tight ${
+        <span className={`text-xs font-semibold text-center leading-tight truncate max-w-full ${
           team.winner ? 'text-gold-dark' : team.name === '待定' ? 'text-gray-400' : 'text-gray-800'
         }`}>
           {team.name}

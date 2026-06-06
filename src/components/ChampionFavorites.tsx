@@ -55,7 +55,7 @@ export function ChampionFavorites({ teams }: ChampionFavoritesProps) {
               <CountryCodeBadge teamId={item.teamId} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="font-semibold text-gray-900 text-sm">{team.name}</span>
+                  <span className="font-semibold text-gray-900 text-sm truncate">{team.name}</span>
                   <span className="text-xs font-bold text-gray-500 tabular-nums">{prob}%</span>
                 </div>
                 {/* Bar */}
