@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Bracket, Seed, SeedItem } from 'react-brackets';
 import { getAllTeams, groups } from '@/data/teams';
 import type { Team } from '@/data/teams';
@@ -742,6 +742,206 @@ interface SeedData {
   winner: Team | null; canClick: boolean; isFinal: boolean;
 }
 
+// ── Module-level bracket helpers (shared by desktop + mobile) ──
+
+const top32 = [...teams].sort((a, b) => b.elo - a.elo).slice(0, 32);
+
+// Match labels for mobile panels
+const R32_LABELS = Array.from({ length: 16 }, (_, i) => `M${i + 1}`);
+const R16_LABELS = Array.from({ length: 8 }, (_, i) => `R16-${'①②③④⑤⑥⑦⑧'[i]}`);
+const QF_LABELS = Array.from({ length: 4 }, (_, i) => `¼决赛-${'①②③④'[i]}`);
+const SF_LABELS = ['半决赛-①', '半决赛-②'];
+const FINAL_LABEL = ['🏆 决赛'];
+
+type SectionId = 'upper' | 'lower' | 'qf' | 'sf' | 'final';
+
+interface SectionDef {
+  id: SectionId;
+  title: string;
+  matchCount: number;
+  slots: Slot[];
+  labels: string[];
+}
+
+const SECTION_DEFS: SectionDef[] = [
+  {
+    id: 'upper', title: '上半区', matchCount: 12,
+    slots: [...R32.slice(0, 8), ...R16_M.slice(0, 4)],
+    labels: [...R32_LABELS.slice(0, 8), ...R16_LABELS.slice(0, 4)],
+  },
+  {
+    id: 'lower', title: '下半区', matchCount: 12,
+    slots: [...R32.slice(8, 16), ...R16_M.slice(4, 8)],
+    labels: [...R32_LABELS.slice(8, 16), ...R16_LABELS.slice(4, 8)],
+  },
+  {
+    id: 'qf', title: '八强', matchCount: 4,
+    slots: QF_M, labels: QF_LABELS,
+  },
+  {
+    id: 'sf', title: '四强', matchCount: 2,
+    slots: SF_M, labels: SF_LABELS,
+  },
+  {
+    id: 'final', title: '决赛', matchCount: 1,
+    slots: FINAL_M, labels: FINAL_LABEL,
+  },
+];
+
+/** Determine which section(s) should be expanded by default based on pick progress */
+function computeCurrentStage(picks: Picks): Set<SectionId> {
+  const hasAny = Object.keys(picks).length > 0;
+  if (!hasAny) return new Set<SectionId>(['upper', 'lower']);
+
+  for (const section of SECTION_DEFS) {
+    for (const slot of section.slots) {
+      if (picks[slot.id]) continue;
+      // Check if both teams are known (match is "pickable")
+      let t1: Team | null = null;
+      let t2: Team | null = null;
+      if (slot.feedsFrom.length === 2) {
+        t1 = teamMap.get(picks[slot.feedsFrom[0]]) ?? null;
+        t2 = teamMap.get(picks[slot.feedsFrom[1]]) ?? null;
+      } else {
+        const idx = R32.indexOf(slot);
+        t1 = top32[idx * 2] ?? null;
+        t2 = top32[idx * 2 + 1] ?? null;
+      }
+      if (t1 && t2) return new Set<SectionId>([section.id]);
+    }
+  }
+  return new Set<SectionId>(['final']);
+}
+
+// ── Mobile-only components ──
+
+/** Single match card for mobile accordion panels */
+function MobileMatchCard({
+  seed, label, onPick,
+}: {
+  seed: SeedData; label: string; onPick: (teamId: string) => void;
+}) {
+  const t1 = seed.teams[0];
+  const t2 = seed.teams[1];
+
+  function teamBtn(team: typeof t1, onSelect: (() => void) | null) {
+    return (
+      <button
+        onClick={onSelect || undefined}
+        disabled={!onSelect}
+        className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl transition-all ${
+          team.winner
+            ? 'bg-gold-50 border-2 border-gold shadow-sm'
+            : onSelect
+              ? 'bg-gray-50 border border-gray-200 active:bg-gray-100 active:scale-[0.98]'
+              : 'bg-gray-50/50 border border-gray-100 opacity-50 cursor-default'
+        }`}
+      >
+        <span className="text-2xl mb-1">
+          {team.flag !== '?' ? team.flag : '❓'}
+        </span>
+        <span className={`text-xs font-semibold text-center leading-tight ${
+          team.winner ? 'text-gold-dark' : team.name === '待定' ? 'text-gray-400' : 'text-gray-800'
+        }`}>
+          {team.name}
+        </span>
+        {team.winner && <span className="text-gold text-sm mt-0.5 font-bold">✓</span>}
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-3 mb-3 shadow-sm">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+          {label}
+        </span>
+        {seed.winner && (
+          <span className="text-xs font-bold text-gold-dark">
+            ✓ {seed.winner.flag} {seed.winner.name}
+          </span>
+        )}
+      </div>
+      <div className="flex items-stretch gap-2">
+        {teamBtn(t1, seed.canClick && t1.id ? () => onPick(t1.id) : null)}
+        <div className="flex items-center shrink-0">
+          <span className="text-xs font-bold text-gray-300">VS</span>
+        </div>
+        {teamBtn(t2, seed.canClick && t2.id ? () => onPick(t2.id) : null)}
+      </div>
+    </div>
+  );
+}
+
+/** Collapsible accordion panel for one bracket section */
+function AccordionSection({
+  title, matchCount, completed, seeds, labels, expanded, onToggle, onPick,
+}: {
+  title: string; matchCount: number; completed: number;
+  seeds: SeedData[]; labels: string[];
+  expanded: boolean; onToggle: () => void;
+  onPick: (slotId: string, teamId: string) => void;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-3 shadow-sm">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors active:bg-gray-100"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="font-bold text-gray-900 text-sm">{title}</span>
+          <span className="text-[11px] text-gray-400">({matchCount}场)</span>
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
+            completed === matchCount ? 'bg-green-100 text-green-700' :
+            completed > 0 ? 'bg-navy/10 text-navy' : 'bg-gray-100 text-gray-400'
+          }`}>
+            {completed}/{matchCount}
+          </span>
+        </div>
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {expanded && (
+        <div className="px-3 pb-3 pt-0 max-h-[65vh] overflow-y-auto scrollbar-hide">
+          {seeds.map((seed, i) => (
+            <MobileMatchCard key={seed.id} seed={seed} label={labels[i]}
+              onPick={(teamId) => onPick(seed.id, teamId)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Fixed bottom progress bar — mobile only */
+function FloatingProgressBar({ filled, total }: { filled: number; total: number }) {
+  const pct = Math.round((filled / total) * 100);
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 py-3 md:hidden"
+      style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-bold text-gray-600 shrink-0 tabular-nums">
+          已完成 {filled}/31
+        </span>
+        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gold rounded-full transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="text-xs font-bold text-gray-500 w-8 text-right tabular-nums">{pct}%</span>
+      </div>
+    </div>
+  );
+}
+
 function ManualBracketView({ onBack }: { onBack: () => void }) {
   const [picks, setPicks] = useState<Picks>({});
   const [started, setStarted] = useState(false);
@@ -778,7 +978,13 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
 
   function reset() { setPicks({}); setStarted(false); }
 
-  const top32 = [...teams].sort((a, b) => b.elo - a.elo).slice(0, 32);
+  // ── Mobile accordion state ──
+  const [mobileSection, setMobileSection] = useState<SectionId | null>(null);
+
+  const expandedSet = useMemo(() => {
+    if (mobileSection !== null) return new Set<SectionId>([mobileSection]);
+    return computeCurrentStage(picks);
+  }, [mobileSection, picks]);
 
   function buildSeed(slot: Slot, isFinal: boolean, roundSlots: Slot[]): SeedData {
     const w = winnerOf(slot.id);
@@ -821,6 +1027,16 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
     { title: '决赛', seeds: FINAL_M.map(s => buildSeed(s, true, FINAL_M)) },
   ];
 
+  // ── Mobile sections: seed data for accordion panels ──
+  const mobileSections = SECTION_DEFS.map(section => {
+    const seeds = section.slots.map(slot => {
+      const isR32Round = slot.feedsFrom.length === 0;
+      return buildSeed(slot, slot.id === 'final', isR32Round ? R32 : section.slots);
+    });
+    const completed = seeds.filter(s => s.winner !== null).length;
+    return { ...section, seeds, completed };
+  });
+
   const filled = [...R32, ...R16_M, ...QF_M, ...SF_M, ...FINAL_M].filter(
     s => picks[s.id]
   ).length;
@@ -851,7 +1067,7 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
             🔄 重置
           </button>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
           <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-gold rounded-full transition-all"
@@ -877,10 +1093,11 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* Bracket Tree */}
-      <div className="overflow-x-auto scrollbar-hide pb-6">
-        <div className="inline-block min-w-[900px] w-full">
-          <Bracket
+      {/* Desktop: Bracket Tree */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto scrollbar-hide pb-6">
+          <div className="inline-block min-w-[900px] w-full">
+            <Bracket
             rounds={roundData as any}
             roundTitleComponent={(title: string) => (
               <div style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -998,8 +1215,27 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
                 </Seed>
               );
             }}
-          />
+            />
+          </div>
         </div>
+      </div>
+
+      {/* Mobile: Accordion Panels */}
+      <div className="md:hidden pb-20">
+        {mobileSections.map((section) => (
+          <AccordionSection
+            key={section.id}
+            title={section.title}
+            matchCount={section.matchCount}
+            completed={section.completed}
+            seeds={section.seeds}
+            labels={section.labels}
+            expanded={expandedSet.has(section.id)}
+            onToggle={() => setMobileSection(prev => prev === section.id ? null : section.id)}
+            onPick={(slotId, teamId) => pick(slotId, teamId)}
+          />
+        ))}
+        <FloatingProgressBar filled={filled} total={31} />
       </div>
     </div>
   );
