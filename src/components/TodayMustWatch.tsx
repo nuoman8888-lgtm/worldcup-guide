@@ -74,10 +74,10 @@ export function TodayMustWatch() {
             <Link
               key={match.id}
               href={`/match/${match.id}`}
-              className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors group"
+              className="flex items-center gap-2 px-3 sm:px-5 py-3 hover:bg-gray-50 transition-colors group"
             >
               {/* Stars + date */}
-              <div className="text-center shrink-0 w-16">
+              <div className="text-center shrink-0 w-12 sm:w-16">
                 <div className="flex justify-center text-xs">
                   {Array.from({ length: stars }, (_, i) => (
                     <span key={i}>⭐</span>
@@ -98,13 +98,13 @@ export function TodayMustWatch() {
               </div>
 
               {/* Reason */}
-              <div className="text-right shrink-0">
+              <div className="text-right shrink-0 hidden xs:block">
                 <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-medium">
                   {reason}
                 </span>
               </div>
 
-              <span className="text-gray-300 group-hover:text-gold transition-colors shrink-0">→</span>
+              <span className="text-gray-300 group-hover:text-gold transition-colors shrink-0 hidden sm:inline">→</span>
             </Link>
           );
         })}

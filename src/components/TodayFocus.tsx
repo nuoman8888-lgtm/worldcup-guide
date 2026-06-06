@@ -113,7 +113,7 @@ export function TodayFocus() {
               {/* Match content */}
               <div className="flex-1 flex items-center justify-between px-5 py-4">
                 {/* Home */}
-                <div className="flex flex-col items-center min-w-0 w-[120px]">
+                <div className="flex flex-col items-center min-w-0 flex-1">
                   {h ? <CountryCodeBadge teamId={h.id} size="lg" /> : <span className="text-3xl mb-1">❓</span>}
                   <span className="font-semibold text-gray-900 text-sm text-center leading-tight">{h?.name || 'TBD'}</span>
                   <span className="text-[10px] text-gray-400">{h?.nameEn}</span>
@@ -137,7 +137,7 @@ export function TodayFocus() {
                 </div>
 
                 {/* Away */}
-                <div className="flex flex-col items-center min-w-0 w-[120px]">
+                <div className="flex flex-col items-center min-w-0 flex-1">
                   {a ? <CountryCodeBadge teamId={a.id} size="lg" /> : <span className="text-3xl mb-1">❓</span>}
                   <span className="font-semibold text-gray-900 text-sm text-center leading-tight">{a?.name || 'TBD'}</span>
                   <span className="text-[10px] text-gray-400">{a?.nameEn}</span>

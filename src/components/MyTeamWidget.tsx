@@ -52,7 +52,7 @@ export function MyTeamWidget() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-4 divide-x divide-gray-100">
+      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
         {/* Next match */}
         <div className="p-3 text-center">
           <div className="text-[10px] text-gray-400 mb-1">下一场</div>
