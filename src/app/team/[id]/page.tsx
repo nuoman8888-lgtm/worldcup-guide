@@ -5,6 +5,7 @@ import { getMatchesByTeam } from '@/data/matches';
 import { getChampionshipProbabilities } from '@/data/standings';
 import { predictMatch } from '@/lib/ai';
 import { getChampionOdds } from '@/data/odds';
+import { searchPlayers } from '@/data/players';
 import RadarChart from '@/components/RadarChart';
 import type { Team } from '@/data/teams';
 
@@ -319,14 +320,30 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
             <h2 className="text-lg font-bold text-gray-900 mb-4">⭐ 核心球员</h2>
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
               <div className="space-y-2">
-                {team.keyPlayers.map((p, i) => (
-                  <div key={p} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <span className="flex items-center justify-center w-9 h-9 rounded-full bg-navy text-gold-light text-sm font-bold shrink-0">
-                      {i + 1}
-                    </span>
-                    <span className="font-semibold text-gray-900 text-sm">{p}</span>
-                  </div>
-                ))}
+                {team.keyPlayers.map((p, i) => {
+                  const players = searchPlayers(p);
+                  const playerId = players.length > 0 ? players[0].id : null;
+                  return playerId ? (
+                    <Link
+                      key={p}
+                      href={`/player/${playerId}`}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                    >
+                      <span className="flex items-center justify-center w-9 h-9 rounded-full bg-navy text-gold-light text-sm font-bold shrink-0">
+                        {i + 1}
+                      </span>
+                      <span className="font-semibold text-gray-900 text-sm group-hover:text-gold-dark transition-colors">{p}</span>
+                      <span className="ml-auto text-gray-300 group-hover:text-gold transition-colors text-xs">→</span>
+                    </Link>
+                  ) : (
+                    <div key={p} className="flex items-center gap-3 p-3 rounded-lg">
+                      <span className="flex items-center justify-center w-9 h-9 rounded-full bg-navy text-gold-light text-sm font-bold shrink-0">
+                        {i + 1}
+                      </span>
+                      <span className="font-semibold text-gray-900 text-sm">{p}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

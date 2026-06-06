@@ -18,6 +18,14 @@ function computeQualProb(teamId: string, standings: { teamId: string }[], groupN
 }
 
 export default function GroupTable({ data, compact = false }: { data: GroupStandings; compact?: boolean }) {
+  // Sort by FIFA rules: points → goalDiff → goalsFor → elo
+  const sorted = [...data.standings].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    return 0;
+  });
+
   if (compact) {
     return (
       <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
@@ -25,7 +33,7 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
           {data.groupName} 组
         </div>
         <div className="divide-y divide-gray-50">
-          {data.standings.map((row, i) => {
+          {sorted.map((row, i) => {
             const team = getTeam(row.teamId);
             const isQualify = i < 2;
             const isPlayoff = i === 2;
@@ -80,7 +88,7 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
             </tr>
           </thead>
           <tbody>
-            {data.standings.map((row, i) => {
+            {sorted.map((row, i) => {
               const team = getTeam(row.teamId);
               if (!team) return null;
               const isQualify = i < 2;

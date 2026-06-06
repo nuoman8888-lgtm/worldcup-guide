@@ -56,9 +56,9 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
         // Navigate to first matching result
         const allResults = [...results.players, ...results.teams];
         const item = allResults[activeIndex];
-        if (item && 'teamId' in item) {
-          // Player result
-          window.location.href = `/team/${item.teamId}`;
+        if (item && 'abilities' in item) {
+          // Player result → navigate to player page
+          window.location.href = `/player/${item.id}`;
         } else if (item && 'group' in item) {
           // Team result
           window.location.href = `/team/${item.id}`;
@@ -173,8 +173,10 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                       const team = getTeamById(p.teamId);
                       const posColors: Record<string, string> = { FW: 'text-red-600 bg-red-50', MF: 'text-blue-600 bg-blue-50', DF: 'text-green-600 bg-green-50', GK: 'text-yellow-600 bg-yellow-50' };
                       return (
-                        <div
+                        <Link
                           key={p.id}
+                          href={`/player/${p.id}`}
+                          onClick={() => { setOpen(false); setQuery(''); }}
                           className={`flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors ${
                             idx === activeIndex ? 'bg-gold-50' : ''
                           }`}
@@ -192,7 +194,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                             </div>
                           </div>
                           <span className="text-xs text-gray-400">→</span>
-                        </div>
+                        </Link>
                       );
                     })}
                   </>

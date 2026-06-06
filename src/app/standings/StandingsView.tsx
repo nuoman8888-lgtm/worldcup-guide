@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import GroupTable from '@/components/GroupTable';
+import { getTeam } from '@/data/teams';
 import type { GroupStandings } from '@/data/standings';
 
 export default function StandingsView({ standings }: { standings: GroupStandings[] }) {
@@ -35,7 +37,7 @@ export default function StandingsView({ standings }: { standings: GroupStandings
       {/* Quick grid: all groups at a glance */}
       <div className="mt-8">
         <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">全部小组一览</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {standings.map(group => (
             <button
               key={group.groupName}
@@ -50,16 +52,20 @@ export default function StandingsView({ standings }: { standings: GroupStandings
                 {group.groupName} 组
               </div>
               {group.standings.slice(0, 2).map((row, i) => {
-                const teamName = row.teamId;
+                const team = getTeam(row.teamId);
                 return (
-                  <div key={row.teamId} className="flex items-center justify-between text-xs py-0.5">
+                  <Link
+                    key={row.teamId}
+                    href={`/team/${row.teamId}`}
+                    className="flex items-center justify-between text-xs py-0.5 hover:opacity-80 transition-opacity"
+                  >
                     <span className={activeGroup === group.groupName ? 'text-white/80' : 'text-gray-600'}>
-                      {i + 1}. {teamName}
+                      {i + 1}. {team?.flag} {team?.name || row.teamId}
                     </span>
                     <span className={`font-semibold tabular-nums ${activeGroup === group.groupName ? 'text-gold-light' : 'text-gray-500'}`}>
                       {row.points}
                     </span>
-                  </div>
+                  </Link>
                 );
               })}
             </button>
