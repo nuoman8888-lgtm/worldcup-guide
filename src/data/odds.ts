@@ -55,14 +55,25 @@ export interface WinnerOdd {
   odds: Record<string, number>;
 }
 
+/** Deterministic hash based on team ID + bookmaker index (0-0.99 range) */
+function stableJitter(teamId: string, bookmakerIdx: number): number {
+  let hash = 0;
+  const str = teamId + '|bm' + bookmakerIdx;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0; // convert to 32-bit int
+  }
+  return (Math.abs(hash) % 1000) / 1000; // 0.000 - 0.999
+}
+
 export function getChampionOdds(): WinnerOdd[] {
   return teams
     .map(t => ({
       teamId: t.id,
       odds: {
-        'Bet365': Math.round(t.winOdds * (0.95 + Math.random() * 0.1) * 100) / 100,
-        'Pinnacle': Math.round(t.winOdds * (0.93 + Math.random() * 0.14) * 100) / 100,
-        'William Hill': Math.round(t.winOdds * (0.97 + Math.random() * 0.06) * 100) / 100,
+        'Bet365': Math.round(t.winOdds * (0.95 + stableJitter(t.id, 0) * 0.1) * 100) / 100,
+        'Pinnacle': Math.round(t.winOdds * (0.93 + stableJitter(t.id, 1) * 0.14) * 100) / 100,
+        'William Hill': Math.round(t.winOdds * (0.97 + stableJitter(t.id, 2) * 0.06) * 100) / 100,
       },
     }))
     .sort((a, b) => a.odds['Bet365'] - b.odds['Bet365']);

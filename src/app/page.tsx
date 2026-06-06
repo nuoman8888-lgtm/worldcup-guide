@@ -131,11 +131,13 @@ export default function HomePage() {
                         <span className="text-gray-400 w-3 tabular-nums">{i + 1}</span>
                         <span>{team.flag}</span>
                         <span className="font-medium text-gray-700 truncate flex-1">{team.name}</span>
-                        <span className="font-semibold text-gray-500 tabular-nums">{row.points}分</span>
+                        <span className="text-gray-400 tabular-nums text-[10px]">#{team.fifaRank}</span>
                       </div>
                     );
                   })}
-                  <div className="text-[10px] text-gray-400 mt-1.5 text-center">点击查看详情</div>
+                  <div className="text-[10px] text-gray-400 mt-1.5 text-center">
+                    赛前预览 · 查看详情 →
+                  </div>
                 </Link>
               ))}
             </div>

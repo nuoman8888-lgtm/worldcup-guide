@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { allMatches } from '@/data/matches';
+import { getTeam } from '@/data/teams';
 
 function getBeijingToday(): string {
   const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -47,7 +48,9 @@ export function CountdownBar() {
       if (diff <= 0 && diff > -7200000) {
         // Match is ongoing (within 2 hours of start)
         setIsLive(true);
-        setNextMatchLabel(`${next.homeTeamId} vs ${next.awayTeamId} 进行中`);
+        const ht = getTeam(next.homeTeamId);
+        const at = getTeam(next.awayTeamId);
+        setNextMatchLabel(`${ht?.flag || ''} ${ht?.name || next.homeTeamId} vs ${at?.flag || ''} ${at?.name || next.awayTeamId} 进行中`);
         setTimeLeft({ h: 0, m: 0, s: 0 });
         return;
       }
@@ -60,7 +63,9 @@ export function CountdownBar() {
       setTimeLeft({ h: hours, m: mins, s: secs });
       // Label: show the next match info
       const d = next.date.slice(5);
-      setNextMatchLabel(`${d} ${next.time}  ${next.homeTeamId} vs ${next.awayTeamId}`);
+      const ht = getTeam(next.homeTeamId);
+      const at = getTeam(next.awayTeamId);
+      setNextMatchLabel(`${d} ${next.time}  ${ht?.flag || ''} ${ht?.name || next.homeTeamId} vs ${at?.flag || ''} ${at?.name || next.awayTeamId}`);
     };
 
     update();

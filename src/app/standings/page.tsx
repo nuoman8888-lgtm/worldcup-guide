@@ -1,5 +1,11 @@
+import type { Metadata } from 'next';
 import { getSimulatedStandings } from '@/data/standings';
 import StandingsView from './StandingsView';
+
+export const metadata: Metadata = {
+  title: '小组积分榜 | 世界杯 2026',
+  description: '2026美加墨世界杯12个小组积分榜。48支球队实时排名，前2名直接晋级32强，8个最佳第3名晋级。',
+};
 
 export default function StandingsPage() {
   const allStandings = getSimulatedStandings();

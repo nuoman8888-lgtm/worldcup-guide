@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { getTeam, getTeamsByGroup, teams } from '@/data/teams';
 import { getMatchesByTeam } from '@/data/matches';
 import { getChampionshipProbabilities } from '@/data/standings';
@@ -58,6 +59,20 @@ function computeRadarData(team: Team) {
     { label: '状态', value: Math.round((formScore / maxFormScore) * 9 + 0.5) },
     { label: '排名', value: Math.max(1, Math.round(10 - (team.fifaRank / 92) * 9)) },
   ];
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const team = getTeam(id);
+  if (!team) return { title: '球队未找到' };
+  return {
+    title: `${team.flag} ${team.name} (${team.nameEn}) | 世界杯 2026 球队数据`,
+    description: `${team.name} — FIFA排名第${team.fifaRank}，ELO ${team.elo}。${team.worldCupApps}次世界杯，历史最佳${team.bestResult}。小组${team.group}组，关键球员：${team.keyPlayers.slice(0, 3).join('、')}。`,
+  };
 }
 
 export async function generateStaticParams() {

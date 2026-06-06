@@ -57,6 +57,7 @@ export default function Navbar() {
 
           {/* Mobile */}
           <div className="flex items-center gap-1 md:hidden">
+            <SearchBox variant="navbar" />
             <button
               className="p-2 rounded-lg hover:bg-navy-light transition-colors"
               onClick={() => setMenuOpen(!menuOpen)}

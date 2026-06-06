@@ -1,9 +1,30 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getMatch, stageNames, formatDate, allMatches } from '@/data/matches';
 import { getTeam } from '@/data/teams';
 import { predictMatch } from '@/lib/ai';
 import { generateOdds } from '@/data/odds';
 import Link from 'next/link';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const match = getMatch(id);
+  if (!match) return { title: '比赛未找到' };
+  const home = match.homeTeamId !== 'TBD' ? getTeam(match.homeTeamId) : null;
+  const away = match.awayTeamId !== 'TBD' ? getTeam(match.awayTeamId) : null;
+  const stageName = stageNames[match.stage];
+  const title = home && away
+    ? `${home.name} vs ${away.name} | ${stageName} | 世界杯 2026`
+    : `${stageName} | 世界杯 2026`;
+  return {
+    title,
+    description: `${formatDate(match.date)} ${match.time} · ${match.city} · ${match.venue}`,
+  };
+}
 
 export async function generateStaticParams() {
   return allMatches.map(m => ({ id: m.id }));

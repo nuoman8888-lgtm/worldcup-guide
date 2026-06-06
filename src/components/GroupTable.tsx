@@ -145,7 +145,7 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
                     {(() => {
                       const totalPts = data.standings.reduce((s, r) => s + r.points, 0);
                       if (totalPts === 0) {
-                        return <span className="text-xs text-gray-400">--</span>;
+                        return <span className="text-xs text-gray-400">赛前</span>;
                       }
                       const prob = computeQualProb(row.teamId, data.standings, data.groupName);
                       return (

@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { getChampionOdds } from '@/data/odds';
 import { getTeam } from '@/data/teams';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: '夺冠赔率分析 | 世界杯 2026',
+  description: '2026世界杯夺冠赔率对比分析。Bet365、Pinnacle、William Hill三大博彩公司最新赔率数据，仅供赛事分析参考。',
+};
 
 export default function OddsPage() {
   const championOdds = getChampionOdds().slice(0, 20);

@@ -7,7 +7,8 @@ import { predictMatch, aiChat, getChampionProbData } from '@/lib/ai';
 export default function AIPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatResult, setChatResult] = useState<any>(null);
-  const [selectedTeam, setSelectedTeam] = useState('');
+  const [simTeam, setSimTeam] = useState('');
+  const [chatTeam, setChatTeam] = useState('');
   const [matchPrediction, setMatchPrediction] = useState<any>(null);
   const [opponent, setOpponent] = useState('');
 
@@ -15,16 +16,16 @@ export default function AIPage() {
 
   const handleChat = () => {
     if (!chatInput.trim()) return;
-    const result = aiChat(chatInput, selectedTeam || undefined);
+    const result = aiChat(chatInput, chatTeam || undefined);
     setChatResult(result);
   };
 
   const handleMatchPredict = () => {
-    if (!selectedTeam || !opponent) return;
-    const home = getTeam(selectedTeam);
+    if (!simTeam || !opponent) return;
+    const home = getTeam(simTeam);
     const away = getTeam(opponent);
     if (!home || !away) return;
-    const prediction = predictMatch(selectedTeam, opponent);
+    const prediction = predictMatch(simTeam, opponent);
     setMatchPrediction({ home, away, ...prediction });
   };
 
@@ -77,8 +78,8 @@ export default function AIPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">主队</label>
               <select
-                value={selectedTeam}
-                onChange={e => setSelectedTeam(e.target.value)}
+                value={simTeam}
+                onChange={e => setSimTeam(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">选择球队...</option>
@@ -95,14 +96,14 @@ export default function AIPage() {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">选择球队...</option>
-                {teams.filter(t => t.id !== selectedTeam).map(t => (
+                {teams.filter(t => t.id !== simTeam).map(t => (
                   <option key={t.id} value={t.id}>{t.flag} {t.name} ({t.nameEn})</option>
                 ))}
               </select>
             </div>
             <button
               onClick={handleMatchPredict}
-              disabled={!selectedTeam || !opponent}
+              disabled={!simTeam || !opponent}
               className="w-full py-2.5 bg-green-700 text-white font-bold rounded-lg hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               🤖 AI 预测胜负
@@ -148,8 +149,8 @@ export default function AIPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">关注球队（可选）</label>
               <select
-                value={selectedTeam}
-                onChange={e => setSelectedTeam(e.target.value)}
+                value={chatTeam}
+                onChange={e => setChatTeam(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">不指定球队</option>
