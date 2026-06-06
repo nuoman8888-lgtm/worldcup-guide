@@ -10,7 +10,6 @@
     "deploy": "next build && wrangler pages deploy out/ --project-name=worldcup-guide --branch=main"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
     "next": "16.2.7",
     "react": "19.2.4",
     "react-brackets": "^0.4.7",
