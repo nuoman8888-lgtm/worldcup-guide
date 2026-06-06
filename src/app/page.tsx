@@ -3,6 +3,7 @@ import { CountdownBar } from '@/components/CountdownBar';
 import { TodayFocus } from '@/components/TodayFocus';
 import { TodayMustWatch } from '@/components/TodayMustWatch';
 import { ChampionFavorites } from '@/components/ChampionFavorites';
+import CountryCodeBadge from '@/components/CountryCodeBadge';
 import { MyTeamWidget } from '@/components/MyTeamWidget';
 import MyTeamModal from '@/components/MyTeamModal';
 import { getSimulatedStandings } from '@/data/standings';
@@ -129,7 +130,7 @@ export default function HomePage() {
                         }`}
                       >
                         <span className="text-gray-400 w-3 tabular-nums">{i + 1}</span>
-                        <span>{team.flag}</span>
+                        <CountryCodeBadge teamId={team.id} size="sm" />
                         <span className="font-medium text-gray-700 truncate flex-1">{team.name}</span>
                         <span className="text-gray-400 tabular-nums text-[10px]">#{team.fifaRank}</span>
                       </div>
@@ -167,7 +168,7 @@ export default function HomePage() {
                       }`}>
                         {i + 1}
                       </span>
-                      <span className="text-xl">{team.flag}</span>
+                      <CountryCodeBadge teamId={item.teamId} />
                       <span className="font-semibold text-gray-900 text-sm flex-1">{team.name}</span>
                       <span className="font-bold text-sm text-gray-900 tabular-nums">{item.odds['Bet365']}</span>
                       <span className="text-gray-300 text-xs group-hover:text-gold transition-colors">→</span>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getAllTeams } from '@/data/teams';
+import CountryCodeBadge from './CountryCodeBadge';
 
 /** Hottest-team priority:
  *  1. 东道主 USA
@@ -107,7 +108,7 @@ export default function MyTeamModal() {
                 }}
                 className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-gold-50 hover:border-gold transition-all border border-gray-100"
               >
-                <span className="text-2xl">{team.flag}</span>
+                <CountryCodeBadge teamId={id} size="sm" />
                 <span className="text-xs font-medium text-gray-700">{team.name}</span>
                 <span className="text-[10px] text-gray-400">#{team.fifaRank}</span>
               </button>

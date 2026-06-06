@@ -111,3 +111,24 @@ export function getTeamsByGroup(group: string): Team[] {
 export function getAllTeams(): Team[] {
   return teams;
 }
+
+/** ISO 3166-1 alpha-2 country codes mapped to team IDs */
+const COUNTRY_CODES: Record<string, string> = {
+  mexico: 'MX', 'south-africa': 'ZA', 'south-korea': 'KR', czech: 'CZ',
+  canada: 'CA', bosnia: 'BA', qatar: 'QA', switzerland: 'CH',
+  usa: 'US', paraguay: 'PY', australia: 'AU', turkey: 'TR',
+  brazil: 'BR', morocco: 'MA', haiti: 'HT', scotland: 'SCO',
+  germany: 'DE', curacao: 'CW', 'ivory-coast': 'CI', ecuador: 'EC',
+  netherlands: 'NL', japan: 'JP', sweden: 'SE', tunisia: 'TN',
+  spain: 'ES', 'cape-verde': 'CV', 'saudi-arabia': 'SA', uruguay: 'UY',
+  belgium: 'BE', egypt: 'EG', iran: 'IR', 'new-zealand': 'NZ',
+  france: 'FR', senegal: 'SN', iraq: 'IQ', norway: 'NO',
+  argentina: 'AR', algeria: 'DZ', austria: 'AT', jordan: 'JO',
+  portugal: 'PT', 'dr-congo': 'CD', uzbekistan: 'UZ', colombia: 'CO',
+  england: 'ENG', croatia: 'HR', ghana: 'GH', panama: 'PA',
+};
+
+/** Get 2-letter country code for a team (ISO alpha-2 / custom 3-letter) */
+export function getCountryCode(teamId: string): string {
+  return COUNTRY_CODES[teamId] || teamId.substring(0, 3).toUpperCase();
+}

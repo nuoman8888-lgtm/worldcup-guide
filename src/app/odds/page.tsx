@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getChampionOdds } from '@/data/odds';
 import { getTeam } from '@/data/teams';
+import CountryCodeBadge from '@/components/CountryCodeBadge';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -56,7 +57,7 @@ export default function OddsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <Link href={`/team/${team.id}`} className="flex items-center gap-2 hover:text-gold-dark transition-colors">
-                        <span className="text-xl">{team.flag}</span>
+                        <CountryCodeBadge teamId={item.teamId} />
                         <div>
                           <div className="font-semibold text-gray-900">{team.name}</div>
                           <div className="text-xs text-gray-400">{team.nameEn}</div>

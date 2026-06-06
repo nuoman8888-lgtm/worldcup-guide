@@ -4,6 +4,7 @@ import { useMyTeam } from './MyTeamModal';
 import { getTeam } from '@/data/teams';
 import { getMatchesByTeam } from '@/data/matches';
 import { getChampionshipProbabilities } from '@/data/standings';
+import CountryCodeBadge from './CountryCodeBadge';
 import Link from 'next/link';
 
 export function MyTeamWidget() {
@@ -36,7 +37,7 @@ export function MyTeamWidget() {
       {/* Header */}
       <div className="bg-navy px-4 py-3 text-white flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{team.flag}</span>
+          <CountryCodeBadge teamId={team.id} />
           <div>
             <div className="font-bold text-sm">我的主队 · {team.name}</div>
             <div className="text-[10px] text-gray-400">{team.group}组 · FIFA #{team.fifaRank}</div>

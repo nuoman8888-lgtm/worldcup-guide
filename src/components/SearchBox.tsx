@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getAllTeams, getTeam as getTeamById } from '@/data/teams';
 import { getMatchesByTeam } from '@/data/matches';
 import { searchPlayers } from '@/data/players';
+import CountryCodeBadge from './CountryCodeBadge';
 
 interface SearchBoxProps {
   variant?: 'navbar' | 'hero';
@@ -190,7 +191,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                               <span className="text-[10px] text-gray-400 font-normal ml-1">{p.nameEn}</span>
                             </div>
                             <div className="text-[10px] text-gray-500">
-                              {p.position} · {team?.flag} {team?.name} · {p.appearances}场{p.goals}球 · {p.marketValue}
+                              {p.position} · {team ? <><CountryCodeBadge teamId={team.id} size="sm" /> {team.name}</> : '未知'} · {p.appearances}场{p.goals}球 · {p.marketValue}
                             </div>
                           </div>
                           <span className="text-xs text-gray-400">→</span>
@@ -221,7 +222,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                             idx + results.players.length === activeIndex ? 'bg-gold-50' : ''
                           }`}
                         >
-                          <span className="text-2xl shrink-0">{team.flag}</span>
+                          <CountryCodeBadge teamId={team.id} />
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-gray-900 text-sm">
                               {team.name}

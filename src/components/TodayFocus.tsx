@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { allMatches, formatDate } from '@/data/matches';
 import { getTeam } from '@/data/teams';
+import CountryCodeBadge from './CountryCodeBadge';
 import type { Match } from '@/data/matches';
 
 function getBeijingToday(): string {
@@ -113,7 +114,7 @@ export function TodayFocus() {
               <div className="flex-1 flex items-center justify-between px-5 py-4">
                 {/* Home */}
                 <div className="flex flex-col items-center min-w-0 w-[120px]">
-                  <span className="text-3xl mb-1">{h?.flag || '❓'}</span>
+                  {h ? <CountryCodeBadge teamId={h.id} size="lg" /> : <span className="text-3xl mb-1">❓</span>}
                   <span className="font-semibold text-gray-900 text-sm text-center leading-tight">{h?.name || 'TBD'}</span>
                   <span className="text-[10px] text-gray-400">{h?.nameEn}</span>
                 </div>
@@ -137,7 +138,7 @@ export function TodayFocus() {
 
                 {/* Away */}
                 <div className="flex flex-col items-center min-w-0 w-[120px]">
-                  <span className="text-3xl mb-1">{a?.flag || '❓'}</span>
+                  {a ? <CountryCodeBadge teamId={a.id} size="lg" /> : <span className="text-3xl mb-1">❓</span>}
                   <span className="font-semibold text-gray-900 text-sm text-center leading-tight">{a?.name || 'TBD'}</span>
                   <span className="text-[10px] text-gray-400">{a?.nameEn}</span>
                 </div>

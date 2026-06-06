@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTeam } from '@/data/teams';
+import CountryCodeBadge from './CountryCodeBadge';
 import type { GroupStandings } from '@/data/standings';
 
 /** Compute qualification probability based on ELO + odds within group */
@@ -47,7 +48,7 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
               >
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400 w-4 tabular-nums">{i + 1}</span>
-                  {team && <span className="text-lg">{team.flag}</span>}
+                  {team && <CountryCodeBadge teamId={team.id} />}
                   <span className="text-sm font-medium text-gray-900">{team?.name || row.teamId}</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500">

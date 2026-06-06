@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTeam } from '@/data/teams';
+import CountryCodeBadge from './CountryCodeBadge';
 import type { WinnerOdd } from '@/data/odds';
 
 interface ChampionFavoritesProps {
@@ -51,7 +52,7 @@ export function ChampionFavorites({ teams }: ChampionFavoritesProps) {
               </span>
 
               {/* Flag + Name */}
-              <span className="text-xl shrink-0">{team.flag}</span>
+              <CountryCodeBadge teamId={item.teamId} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="font-semibold text-gray-900 text-sm">{team.name}</span>

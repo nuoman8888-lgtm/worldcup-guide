@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { allMatches } from '@/data/matches';
 import { getTeam } from '@/data/teams';
+import CountryCodeBadge from './CountryCodeBadge';
 
 function getBeijingToday(): string {
   const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -89,11 +90,11 @@ export function TodayMustWatch() {
 
               {/* Teams */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-lg shrink-0">{home?.flag}</span>
+                {home ? <CountryCodeBadge teamId={home.id} /> : null}
                 <span className="text-xs font-medium text-gray-900 truncate">{home?.name}</span>
                 <span className="text-gray-300 text-[10px] shrink-0">vs</span>
                 <span className="text-xs font-medium text-gray-900 truncate">{away?.name}</span>
-                <span className="text-lg shrink-0">{away?.flag}</span>
+                {away ? <CountryCodeBadge teamId={away.id} /> : null}
               </div>
 
               {/* Reason */}

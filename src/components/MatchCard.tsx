@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTeam } from '@/data/teams';
+import CountryCodeBadge from './CountryCodeBadge';
 import type { Match } from '@/data/matches';
 
 const stageLabels: Record<string, string> = {
@@ -62,7 +63,7 @@ export default function MatchCard({ match, localTime }: { match: Match; localTim
         <div className="flex flex-col items-center flex-1 min-w-0">
           {homeTeam ? (
             <>
-              <span className="text-3xl mb-1">{homeTeam.flag}</span>
+              {homeTeam ? <CountryCodeBadge teamId={homeTeam.id} size="lg" /> : <span className="text-3xl mb-1">❓</span>}
               <span className="font-semibold text-gray-900 text-xs text-center truncate w-full">{homeTeam.name}</span>
             </>
           ) : (
@@ -99,7 +100,7 @@ export default function MatchCard({ match, localTime }: { match: Match; localTim
         <div className="flex flex-col items-center flex-1 min-w-0">
           {awayTeam ? (
             <>
-              <span className="text-3xl mb-1">{awayTeam.flag}</span>
+              {awayTeam ? <CountryCodeBadge teamId={awayTeam.id} size="lg" /> : <span className="text-3xl mb-1">❓</span>}
               <span className="font-semibold text-gray-900 text-xs text-center truncate w-full">{awayTeam.name}</span>
             </>
           ) : (

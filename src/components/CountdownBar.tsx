@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { allMatches } from '@/data/matches';
-import { getTeam } from '@/data/teams';
+import { getTeam, getCountryCode } from '@/data/teams';
 
 function getBeijingToday(): string {
   const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -50,7 +50,9 @@ export function CountdownBar() {
         setIsLive(true);
         const ht = getTeam(next.homeTeamId);
         const at = getTeam(next.awayTeamId);
-        setNextMatchLabel(`${ht?.flag || ''} ${ht?.name || next.homeTeamId} vs ${at?.flag || ''} ${at?.name || next.awayTeamId} 进行中`);
+        const hCode = ht ? getCountryCode(ht.id) : next.homeTeamId;
+        const aCode = at ? getCountryCode(at.id) : next.awayTeamId;
+        setNextMatchLabel(`[${hCode}] ${ht?.name || next.homeTeamId} vs [${aCode}] ${at?.name || next.awayTeamId} 进行中`);
         setTimeLeft({ h: 0, m: 0, s: 0 });
         return;
       }
@@ -65,7 +67,9 @@ export function CountdownBar() {
       const d = next.date.slice(5);
       const ht = getTeam(next.homeTeamId);
       const at = getTeam(next.awayTeamId);
-      setNextMatchLabel(`${d} ${next.time}  ${ht?.flag || ''} ${ht?.name || next.homeTeamId} vs ${at?.flag || ''} ${at?.name || next.awayTeamId}`);
+      const hCode2 = ht ? getCountryCode(ht.id) : next.homeTeamId;
+      const aCode2 = at ? getCountryCode(at.id) : next.awayTeamId;
+      setNextMatchLabel(`${d} ${next.time}  [${hCode2}] ${ht?.name || next.homeTeamId} vs [${aCode2}] ${at?.name || next.awayTeamId}`);
     };
 
     update();
