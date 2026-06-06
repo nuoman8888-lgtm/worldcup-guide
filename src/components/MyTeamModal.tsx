@@ -3,10 +3,28 @@
 import { useState, useEffect } from 'react';
 import { getAllTeams } from '@/data/teams';
 
+/** Hottest-team priority:
+ *  1. 东道主 USA
+ *  2. 夺冠热门 France / Argentina / Spain
+ *  3. 球星球队 Norway (Haaland)
+ *  其余按关注度排序
+ */
 const POPULAR_IDS = [
-  'argentina', 'brazil', 'france', 'germany', 'england',
-  'spain', 'portugal', 'netherlands', 'japan', 'south-korea',
-  'uruguay', 'croatia', 'belgium', 'mexico', 'usa',
+  'usa',          // 🇺🇸 东道主
+  'france',       // 🇫🇷 夺冠热门
+  'argentina',    // 🇦🇷 卫冕冠军
+  'spain',        // 🇪🇸 夺冠热门
+  'norway',       // 🇳🇴 哈兰德 (默认推荐)
+  'brazil',       // 🇧🇷
+  'england',      // 🏴󠁧󠁢󠁥󠁮󠁧󠁿
+  'germany',      // 🇩🇪
+  'portugal',     // 🇵🇹
+  'netherlands',  // 🇳🇱
+  'japan',        // 🇯🇵
+  'south-korea',  // 🇰🇷
+  'uruguay',      // 🇺🇾
+  'croatia',      // 🇭🇷
+  'belgium',      // 🇧🇪
 ];
 
 const STORAGE_KEY = 'worldcup-my-team';
