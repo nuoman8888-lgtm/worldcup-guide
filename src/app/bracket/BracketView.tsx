@@ -163,16 +163,16 @@ function simulateGroup(groupName: string): GroupResult {
    2026 World Cup Knockout Bracket (Real FIFA Format)
    ═══════════════════════════════════════════════════ */
 
-/** Valid 3rd-place groups for R32 matches M1–M8 (1A–1H) */
+/** FIFA 2026 official: valid 3rd-place sources for each group winner that faces a 3rd-place team */
 const THIRD_VALID: Record<string, string[]> = {
-  'A': ['C','D','E','F','G','I','K','L'],
-  'B': ['A','C','D','F','G','H','J','K'],
-  'C': ['A','B','E','F','G','I','J','L'],
-  'D': ['A','B','E','F','G','H','J','K'],
-  'E': ['A','B','C','D','H','I','K','L'],
-  'F': ['A','C','D','E','G','H','I','J'],
-  'G': ['A','B','C','E','F','H','I','J'],
-  'H': ['A','B','C','D','E','F','J','L'],
+  'A': ['C','E','F','H','I'],
+  'B': ['E','F','G','I','J'],
+  'D': ['B','E','F','I','J'],
+  'E': ['A','B','C','D','F'],
+  'G': ['A','E','H','I','J'],
+  'I': ['C','D','F','G','H'],
+  'K': ['D','E','I','J','L'],
+  'L': ['E','H','I','J','K'],
 };
 
 /**
@@ -190,7 +190,7 @@ function assignThirdPlaceTeams(
     return adjElo(b.team) - adjElo(a.team);
   });
 
-  const slotGroups = ['A','B','C','D','E','F','G','H'];
+  const slotGroups = ['A','B','D','E','G','I','K','L']; // FIFA: these 8 group winners face 3rd-place teams
   const assigned = new Map<string, Team>(); // slot group → team
   const used = new Set<string>(); // team ids already assigned
 
@@ -249,26 +249,26 @@ function buildR32Bracket(groupResults: GroupResult[]): Team[][] {
 
   const thirdAssign = assignThirdPlaceTeams(bestThirds);
 
-  // Build 16 R32 matches
-  // M1–M8: 1A–1H vs 3rd place teams
-  const m1_8: Team[][] = ['A','B','C','D','E','F','G','H'].map(g => [
+  // FIFA 2026 Official R32 matchups (16 matches)
+  // [0-7] Group winners vs 3rd place (A,B,D,E,G,I,K,L)
+  const m3rd: Team[][] = ['A','B','D','E','G','I','K','L'].map(g => [
     winners[g],
     thirdAssign[g],
   ]);
 
-  // M9–M12: 1I vs 2J, 1J vs 2I, 1K vs 2L, 1L vs 2K
-  const m9: Team[] = [winners['I'], runners['J']];
-  const m10: Team[] = [winners['J'], runners['I']];
-  const m11: Team[] = [winners['K'], runners['L']];
-  const m12: Team[] = [winners['L'], runners['K']];
+  // [8-11] Cross-group winners vs runners-up (FIFA official: C-F, H-J pairs)
+  const m8:  Team[] = [winners['C'], runners['F']];  // 1C vs 2F
+  const m9:  Team[] = [winners['F'], runners['C']];  // 1F vs 2C
+  const m10: Team[] = [winners['H'], runners['J']];  // 1H vs 2J
+  const m11: Team[] = [winners['J'], runners['H']];  // 1J vs 2H
 
-  // M13–M16: 2A vs 2B, 2C vs 2D, 2E vs 2F, 2G vs 2H
-  const m13: Team[] = [runners['A'], runners['B']];
-  const m14: Team[] = [runners['C'], runners['D']];
-  const m15: Team[] = [runners['E'], runners['F']];
-  const m16: Team[] = [runners['G'], runners['H']];
+  // [12-15] Runners-up matches (FIFA official: 2A-2B, 2D-2G, 2E-2I, 2K-2L)
+  const m12: Team[] = [runners['A'], runners['B']];  // 2A vs 2B
+  const m13: Team[] = [runners['D'], runners['G']];  // 2D vs 2G
+  const m14: Team[] = [runners['E'], runners['I']];  // 2E vs 2I
+  const m15: Team[] = [runners['K'], runners['L']];  // 2K vs 2L
 
-  return [...m1_8, m9, m10, m11, m12, m13, m14, m15, m16];
+  return [...m3rd, m8, m9, m10, m11, m12, m13, m14, m15];
 }
 
 /* ═══════════════════════════════════════════════════
@@ -308,22 +308,17 @@ function simulateOnce(): SimResult {
   // R32: 16 matches → 16 winners
   const r32Winners = r32Matches.map(m => playKnockout(m));
 
-  // R16: 8 matches (pair adjacent R32 winners)
-  // R16-1..4: r32Winners[0-7] paired as (0,1)(2,3)(4,5)(6,7)
-  // R16-5..8: r32Winners[8-15] paired as (8,12)(9,13)(10,14)(11,15)
-  // Wait, let me re-derive the bracket.
-  // From the bracket definition:
-  // R16-1: Winner(M1) vs Winner(M2)   → r32Winners[0] vs r32Winners[1]
-  // R16-2: Winner(M3) vs Winner(M4)   → r32Winners[2] vs r32Winners[3]
-  // R16-3: Winner(M5) vs Winner(M6)   → r32Winners[4] vs r32Winners[5]
-  // R16-4: Winner(M7) vs Winner(M8)   → r32Winners[6] vs r32Winners[7]
-  // R16-5: Winner(M9) vs Winner(M13)  → r32Winners[8] vs r32Winners[12]
-  // R16-6: Winner(M10) vs Winner(M14) → r32Winners[9] vs r32Winners[13]
-  // R16-7: Winner(M11) vs Winner(M15) → r32Winners[10] vs r32Winners[14]
-  // R16-8: Winner(M12) vs Winner(M16) → r32Winners[11] vs r32Winners[15]
-  const r16Pairings = [
-    [0, 1], [2, 3], [4, 5], [6, 7],        // upper half
-    [8, 12], [9, 13], [10, 14], [11, 15],   // lower half
+  // R16: FIFA 2026 official bracket pairings
+  // Matches feed into QF-1 through QF-4, then SF-1 (upper) and SF-2 (lower)
+  const r16Pairings: [number, number][] = [
+    [3, 5],    // R16-1: 1E/3rd vs 1I/3rd  → QF-1
+    [12, 9],   // R16-2: 2A/2B  vs 1F/2C   → QF-1
+    [15, 10],  // R16-3: 2K/2L  vs 1H/2J   → QF-2
+    [2, 4],    // R16-4: 1D/3rd vs 1G/3rd  → QF-2
+    [8, 14],   // R16-5: 1C/2F  vs 2E/2I   → QF-3
+    [0, 7],    // R16-6: 1A/3rd vs 1L/3rd  → QF-3
+    [11, 13],  // R16-7: 1J/2H  vs 2D/2G   → QF-4
+    [1, 6],    // R16-8: 1B/3rd vs 1K/3rd  → QF-4
   ];
   const r16Winners = r16Pairings.map(([a, b]) =>
     playKnockout([r32Winners[a], r32Winners[b]]));
@@ -710,16 +705,32 @@ const R32: Slot[] = Array.from({ length: 16 }, (_, i) => ({
   id: `r32-${i + 1}`, date: '', time: '', city: '', feedsFrom: [],
 }));
 
-function nextRound(from: Slot[], prefix: string, count: number): Slot[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${prefix}-${i + 1}`, date: '', time: '', city: '',
-    feedsFrom: [from[i * 2].id, from[i * 2 + 1].id],
-  }));
-}
+// FIFA 2026 official R16 feedsFrom (R32 1-based IDs)
+const R16_M: Slot[] = [
+  { id: 'r16-1', date: '', time: '', city: '', feedsFrom: ['r32-4', 'r32-6'] },    // R32[3],[5]
+  { id: 'r16-2', date: '', time: '', city: '', feedsFrom: ['r32-13', 'r32-10'] },   // R32[12],[9]
+  { id: 'r16-3', date: '', time: '', city: '', feedsFrom: ['r32-16', 'r32-11'] },   // R32[15],[10]
+  { id: 'r16-4', date: '', time: '', city: '', feedsFrom: ['r32-3', 'r32-5'] },     // R32[2],[4]
+  { id: 'r16-5', date: '', time: '', city: '', feedsFrom: ['r32-9', 'r32-15'] },    // R32[8],[14]
+  { id: 'r16-6', date: '', time: '', city: '', feedsFrom: ['r32-1', 'r32-8'] },     // R32[0],[7]
+  { id: 'r16-7', date: '', time: '', city: '', feedsFrom: ['r32-12', 'r32-14'] },   // R32[11],[13]
+  { id: 'r16-8', date: '', time: '', city: '', feedsFrom: ['r32-2', 'r32-7'] },     // R32[1],[6]
+];
 
-const R16_M = nextRound(R32, 'r16', 8);
-const QF_M = nextRound(R16_M, 'qf', 4);
-const SF_M = nextRound(QF_M, 'sf', 2);
+// FIFA 2026 official QF feedsFrom (R16 IDs)
+const QF_M: Slot[] = [
+  { id: 'qf-1', date: '', time: '', city: '', feedsFrom: ['r16-1', 'r16-2'] },
+  { id: 'qf-2', date: '', time: '', city: '', feedsFrom: ['r16-3', 'r16-4'] },
+  { id: 'qf-3', date: '', time: '', city: '', feedsFrom: ['r16-5', 'r16-6'] },
+  { id: 'qf-4', date: '', time: '', city: '', feedsFrom: ['r16-7', 'r16-8'] },
+];
+
+// FIFA 2026 official SF feedsFrom (QF IDs)
+const SF_M: Slot[] = [
+  { id: 'sf-1', date: '', time: '', city: '', feedsFrom: ['qf-1', 'qf-2'] },
+  { id: 'sf-2', date: '', time: '', city: '', feedsFrom: ['qf-3', 'qf-4'] },
+];
+
 const FINAL_M: Slot[] = [
   { id: 'final', date: '', time: '', city: '', feedsFrom: ['sf-1', 'sf-2'] },
 ];
@@ -753,14 +764,16 @@ interface SectionDef {
 
 const SECTION_DEFS: SectionDef[] = [
   {
+    // QF-1 + QF-2 → SF-1 (Upper bracket)
     id: 'upper', title: '上半区', matchCount: 12,
-    slots: [...R32.slice(0, 8), ...R16_M.slice(0, 4)],
-    labels: [...R32_LABELS.slice(0, 8), ...R16_LABELS.slice(0, 4)],
+    slots: [R32[3], R32[5], R32[12], R32[9], R32[15], R32[10], R32[2], R32[4], R16_M[0], R16_M[1], R16_M[2], R16_M[3]],
+    labels: [R32_LABELS[3], R32_LABELS[5], R32_LABELS[12], R32_LABELS[9], R32_LABELS[15], R32_LABELS[10], R32_LABELS[2], R32_LABELS[4], R16_LABELS[0], R16_LABELS[1], R16_LABELS[2], R16_LABELS[3]],
   },
   {
+    // QF-3 + QF-4 → SF-2 (Lower bracket)
     id: 'lower', title: '下半区', matchCount: 12,
-    slots: [...R32.slice(8, 16), ...R16_M.slice(4, 8)],
-    labels: [...R32_LABELS.slice(8, 16), ...R16_LABELS.slice(4, 8)],
+    slots: [R32[8], R32[14], R32[0], R32[7], R32[11], R32[13], R32[1], R32[6], R16_M[4], R16_M[5], R16_M[6], R16_M[7]],
+    labels: [R32_LABELS[8], R32_LABELS[14], R32_LABELS[0], R32_LABELS[7], R32_LABELS[11], R32_LABELS[13], R32_LABELS[1], R32_LABELS[6], R16_LABELS[4], R16_LABELS[5], R16_LABELS[6], R16_LABELS[7]],
   },
   {
     id: 'qf', title: '八强', matchCount: 4,
