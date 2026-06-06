@@ -37,6 +37,7 @@ export const topPlayers: Player[] = [
   { id:'enzo', name:'恩佐·费尔南德斯', nameEn:'Enzo Fernández', teamId:'argentina', position:'MF', age:25, appearances:35, goals:4, marketValue:'8000万欧', marketValueEur:80, club:'Chelsea', abilities:{speed:6,shooting:7,passing:9,dribbling:7,defense:7,physical:6} },
 
   // ── Brazil ──
+  { id:'neymar', name:'内马尔', nameEn:'Neymar Jr', teamId:'brazil', position:'FW', age:34, appearances:128, goals:79, marketValue:'1500万欧', marketValueEur:15, club:'Santos', abilities:{speed:8,shooting:8,passing:9,dribbling:10,defense:2,physical:5} },
   { id:'vinicius', name:'维尼修斯', nameEn:'Vinícius Júnior', teamId:'brazil', position:'FW', age:25, appearances:40, goals:8, marketValue:'2亿欧', marketValueEur:200, club:'Real Madrid', abilities:{speed:10,shooting:8,passing:7,dribbling:10,defense:3,physical:6} },
   { id:'rodrygo', name:'罗德里戈', nameEn:'Rodrygo', teamId:'brazil', position:'FW', age:25, appearances:30, goals:7, marketValue:'1.1亿欧', marketValueEur:110, club:'Real Madrid', abilities:{speed:9,shooting:8,passing:7,dribbling:9,defense:3,physical:5} },
 
