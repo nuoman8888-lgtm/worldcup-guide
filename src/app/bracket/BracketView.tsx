@@ -389,121 +389,100 @@ interface AggregatedResults {
   totalSims: number;
 }
 
-function runSimulations(count: number): AggregatedResults {
-  const champCount: Record<string, number> = {};
-  const runnerCount: Record<string, number> = {};
-  const semiCount: Record<string, number> = {};
-  const quartCount: Record<string, number> = {};
-
-  // Track one valid simulation per champion for representative selection
-  const champSims: Record<string, SimResult> = {};
-
-  for (let n = 0; n < count; n++) {
-    const r = simulateOnce();
-
-    champCount[r.champion.id] = (champCount[r.champion.id] || 0) + 1;
-    runnerCount[r.runnerUp.id] = (runnerCount[r.runnerUp.id] || 0) + 1;
-    r.semiFinalists.forEach(t => {
-      semiCount[t.id] = (semiCount[t.id] || 0) + 1;
-    });
-    r.quarterFinalists.forEach(t => {
-      quartCount[t.id] = (quartCount[t.id] || 0) + 1;
-    });
-
-    // Store this simulation if it's the first or latest for this champion
-    champSims[r.champion.id] = r;
-  }
-
-  const pct = (c: number) => Math.round((c / count) * 1000) / 10;
-
-  // Build per-team probabilities
-  const allTeamIds = new Set<string>();
-  Object.keys(champCount).forEach(id => allTeamIds.add(id));
-  Object.keys(runnerCount).forEach(id => allTeamIds.add(id));
-  Object.keys(semiCount).forEach(id => allTeamIds.add(id));
-  Object.keys(quartCount).forEach(id => allTeamIds.add(id));
-
-  const teamsProbs: Record<string, {
-    team: Team;
-    championProb: number;
-    runnerUpProb: number;
-    semiProb: number;
-    quarterProb: number;
-  }> = {};
-
-  allTeamIds.forEach(id => {
-    const team = teamMap.get(id);
-    if (team) {
-      teamsProbs[id] = {
-        team,
-        championProb: pct(champCount[id] || 0),
-        runnerUpProb: pct(runnerCount[id] || 0),
-        semiProb: pct(semiCount[id] || 0),
-        quarterProb: pct(quartCount[id] || 0),
-      };
-    }
-  });
-
-  // Rankings
-  const rank = (counter: Record<string, number>, limit: number) =>
-    Object.entries(counter)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit)
-      .map(([id, c]) => ({ team: teamMap.get(id)!, prob: pct(c) }))
-      .filter(x => x.team);
-
-  const championRanking = rank(champCount, 10);
-  const runnerUpRanking = rank(runnerCount, 10);
-  const semiRanking = rank(semiCount, 16);
-  const quarterRanking = rank(quartCount, 16);
-
-  // Pick representative: randomly weighted by champion frequency
-  // This ensures the displayed champion varies across runs while remaining
-  // statistically honest — teams that win more often appear more often.
-  const champEntries = Object.entries(champCount);
-  const totalChamps = champEntries.reduce((sum, [, c]) => sum + c, 0);
-  let roll = Math.random() * totalChamps;
-  let selectedChampId = champEntries[0]?.[0] ?? '';
-  for (const [id, c] of champEntries) {
-    roll -= c;
-    if (roll <= 0) {
-      selectedChampId = id;
-      break;
-    }
-  }
-  const representative = champSims[selectedChampId] || simulateOnce(); // fallback
-
-  return {
-    teams: teamsProbs,
-    championRanking,
-    runnerUpRanking,
-    semiRanking,
-    quarterRanking,
-    representative,
-    totalSims: count,
-  };
-}
-
 /* ═══════════════════════════════════════════════════
    AI Prediction View — Mobile-First Cards
    ═══════════════════════════════════════════════════ */
 
-const SIM_COUNT = 3000;
+const SIM_COUNT = 1000;
 
 function AIPredictionView({ onManual }: { onManual: () => void }) {
   const [results, setResults] = useState<AggregatedResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [runCount, setRunCount] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  // Run simulations on first render
+  // Run simulations in chunks to avoid blocking the main thread
   const run = useCallback(() => {
     setLoading(true);
-    setTimeout(() => {
-      const r = runSimulations(SIM_COUNT);
-      setResults(r);
-      setRunCount(c => c + 1);
-      setLoading(false);
-    }, 50);
+    setProgress(0);
+
+    // Use requestIdleCallback or setTimeout to run in chunks
+    const CHUNK = 300;
+    const TOTAL = SIM_COUNT;
+
+    const champCount: Record<string, number> = {};
+    const runnerCount: Record<string, number> = {};
+    const semiCount: Record<string, number> = {};
+    const quartCount: Record<string, number> = {};
+    const champSims: Record<string, SimResult> = {};
+
+    let done = 0;
+
+    function processChunk() {
+      const start = performance.now();
+      const end = Math.min(done + CHUNK, TOTAL);
+
+      for (let n = done; n < end; n++) {
+        const r = simulateOnce();
+        champCount[r.champion.id] = (champCount[r.champion.id] || 0) + 1;
+        runnerCount[r.runnerUp.id] = (runnerCount[r.runnerUp.id] || 0) + 1;
+        r.semiFinalists.forEach(t => { semiCount[t.id] = (semiCount[t.id] || 0) + 1; });
+        r.quarterFinalists.forEach(t => { quartCount[t.id] = (quartCount[t.id] || 0) + 1; });
+        champSims[r.champion.id] = r;
+      }
+
+      done = end;
+      setProgress(Math.round((done / TOTAL) * 100));
+
+      if (done < TOTAL) {
+        // Yield to browser between chunks
+        setTimeout(processChunk, 0);
+      } else {
+        // All done — build results
+        const pct = (c: number) => Math.round((c / TOTAL) * 1000) / 10;
+        const allTeamIds = new Set([...Object.keys(champCount), ...Object.keys(runnerCount), ...Object.keys(semiCount), ...Object.keys(quartCount)]);
+        const teamsProbs: Record<string, { team: Team; championProb: number; runnerUpProb: number; semiProb: number; quarterProb: number }> = {};
+        allTeamIds.forEach(id => {
+          const team = teamMap.get(id);
+          if (team) {
+            teamsProbs[id] = {
+              team,
+              championProb: pct(champCount[id] || 0),
+              runnerUpProb: pct(runnerCount[id] || 0),
+              semiProb: pct(semiCount[id] || 0),
+              quarterProb: pct(quartCount[id] || 0),
+            };
+          }
+        });
+
+        const rank = (counter: Record<string, number>, limit: number) =>
+          Object.entries(counter).sort((a, b) => b[1] - a[1]).slice(0, limit)
+            .map(([id, c]) => ({ team: teamMap.get(id)!, prob: pct(c) })).filter(x => x.team);
+
+        const champEntries = Object.entries(champCount);
+        const totalChamps = champEntries.reduce((sum, [, c]) => sum + c, 0);
+        let roll = Math.random() * totalChamps;
+        let selectedChampId = champEntries[0]?.[0] ?? '';
+        for (const [id, c] of champEntries) {
+          roll -= c;
+          if (roll <= 0) { selectedChampId = id; break; }
+        }
+
+        setResults({
+          teams: teamsProbs,
+          championRanking: rank(champCount, 10),
+          runnerUpRanking: rank(runnerCount, 10),
+          semiRanking: rank(semiCount, 16),
+          quarterRanking: rank(quartCount, 16),
+          representative: champSims[selectedChampId] || simulateOnce(),
+          totalSims: TOTAL,
+        });
+        setRunCount(c => c + 1);
+        setLoading(false);
+      }
+    }
+
+    setTimeout(processChunk, 50);
   }, []);
 
   // Auto-run on mount
@@ -514,7 +493,15 @@ function AIPredictionView({ onManual }: { onManual: () => void }) {
       <div className="flex flex-col items-center justify-center py-20">
         <div className="animate-spin text-4xl mb-4">⚽</div>
         <p className="text-gray-500 text-sm">正在运行 {SIM_COUNT.toLocaleString()} 次蒙特卡洛模拟...</p>
-        <p className="text-gray-400 text-xs mt-1">模拟完整小组赛 + 淘汰赛，预计需要 1-2 秒</p>
+        {progress > 0 && (
+          <div className="w-48 mt-3">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-gold rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="text-center text-xs text-gray-400 mt-1">{progress}%</p>
+          </div>
+        )}
+        <p className="text-gray-400 text-xs mt-1">模拟完整小组赛 + 淘汰赛，非阻塞执行中</p>
       </div>
     );
   }
@@ -1023,13 +1010,14 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
     };
   }
 
-  const roundData = [
+  const roundData = useMemo(() => [
     { title: '32 强', seeds: R32.map(s => buildSeed(s, false, R32)) },
     { title: '16 强', seeds: R16_M.map(s => buildSeed(s, false, R16_M)) },
     { title: '¼ 决赛', seeds: QF_M.map(s => buildSeed(s, false, QF_M)) },
     { title: '半决赛', seeds: SF_M.map(s => buildSeed(s, false, SF_M)) },
     { title: '决赛', seeds: FINAL_M.map(s => buildSeed(s, true, FINAL_M)) },
-  ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [picks]);
 
   // ── Mobile sections: seed data for accordion panels ──
   const mobileSections = SECTION_DEFS.map(section => {
