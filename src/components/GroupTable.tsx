@@ -65,7 +65,7 @@ export default function GroupTable({ data, compact = false }: { data: GroupStand
 
   // Full table
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden max-w-full">
       {/* Header */}
       <div className="bg-navy px-5 py-3 text-white">
         <h3 className="font-bold text-base">{data.groupName} 组</h3>

@@ -87,7 +87,7 @@ export function CountdownBar() {
       </div>
 
       {/* Center: next match label (hidden on mobile) */}
-      <div className="hidden md:block text-white/50 text-xs truncate mx-4 max-w-xs">
+      <div className="hidden md:block text-white/50 text-xs truncate mx-4 max-w-[180px] lg:max-w-xs">
         {mounted && nextMatchLabel}
       </div>
 

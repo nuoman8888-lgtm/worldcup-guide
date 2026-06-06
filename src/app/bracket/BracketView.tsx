@@ -1133,7 +1133,7 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
       {/* Desktop: Bracket Tree */}
       <div className="hidden md:block">
         <div className="overflow-x-auto scrollbar-hide pb-6">
-          <div className="inline-block min-w-[900px] w-full">
+          <div className="inline-block min-w-[820px] w-full">
             <Bracket
             rounds={roundData as any}
             roundTitleComponent={(title: string) => (

@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-gray-50">
+      <body className="min-h-full flex flex-col bg-gray-50 overflow-x-hidden">
         <Navbar />
         <main className="flex-1">{children}</main>
         <footer className="bg-navy text-gray-400 py-10 mt-auto border-t border-navy-600">

@@ -26,7 +26,7 @@ export default function OddsPage() {
       </div>
 
       {/* Champion Winner Odds */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden max-w-full">
         <div className="bg-navy px-6 py-4 text-white">
           <h2 className="font-bold text-lg">🏆 冠军赔率 Top 20</h2>
           <p className="text-sm text-gray-400">赔率越低，夺冠概率越高</p>
