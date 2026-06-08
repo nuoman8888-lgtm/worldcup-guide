@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PageTracker from '@/components/PageTracker';
 import { CountdownBar } from '@/components/CountdownBar';
 import { TodayFocus } from '@/components/TodayFocus';
 import { TodayMustWatch } from '@/components/TodayMustWatch';
@@ -18,6 +19,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
+      <PageTracker event="home_view" />
       {/* MyTeam modal (first visit) */}
       <MyTeamModal />
 

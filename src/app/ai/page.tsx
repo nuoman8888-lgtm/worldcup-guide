@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { getTeam, teams } from '@/data/teams';
 import { predictMatch, aiChat, getChampionProbData } from '@/lib/ai';
+import { trackPredictorStart, trackPredictorFinish, trackPredictorShare, trackEvent } from '@/lib/analytics';
 
 export default function AIPage() {
   const [chatInput, setChatInput] = useState('');
@@ -22,11 +23,13 @@ export default function AIPage() {
 
   const handleMatchPredict = () => {
     if (!simTeam || !opponent) return;
+    trackPredictorStart();
     const home = getTeam(simTeam);
     const away = getTeam(opponent);
     if (!home || !away) return;
     const prediction = predictMatch(simTeam, opponent);
     setMatchPrediction({ home, away, ...prediction });
+    trackPredictorFinish();
   };
 
   return (

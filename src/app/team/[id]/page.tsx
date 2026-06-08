@@ -9,6 +9,7 @@ import { getChampionOdds } from '@/data/odds';
 import { searchPlayers } from '@/data/players';
 import RadarChart from '@/components/RadarChart';
 import TeamStories from '@/components/TeamStories';
+import PageTracker from '@/components/PageTracker';
 import storiesData from '@/data/team-stories.json';
 import type { Team } from '@/data/teams';
 
@@ -110,6 +111,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="min-h-screen">
+      <PageTracker event="team_page_view" data={{ team: team.id }} />
       {/* ═══════ Hero — flag-based gradient ═══════ */}
       <section className={`bg-gradient-to-br ${heroColor} ${lightText ? 'text-gray-900' : 'text-white'}`}>
         <div className="max-w-6xl mx-auto px-4 py-10 md:py-14">

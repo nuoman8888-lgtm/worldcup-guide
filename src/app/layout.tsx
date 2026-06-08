@@ -49,7 +49,7 @@ export default function RootLayout({
                 <span>邮箱：2377119002@qq.com</span>
               </div>
               <p className="text-gray-600 text-[10px] mt-4">
-                Built with Next.js · Deployed on Cloudflare Pages · © 2026
+                Built with Next.js · Deployed on Cloudflare Pages · © 2026 · <a href="/admin/analytics" className="text-gray-400 hover:text-gray-300 transition-colors">数据统计</a>
               </p>
             </div>
           </div>
