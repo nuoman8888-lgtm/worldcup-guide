@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { getPlayer, getPlayersByTeam, getPlayerRadarData, topPlayers } from '@/data/players';
 import { getTeam } from '@/data/teams';
 import RadarChart from '@/components/RadarChart';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 // ── Position colors ──
 const posColors: Record<string, string> = {
@@ -59,10 +60,12 @@ export default async function PlayerPage({
       <section className={`bg-gradient-to-br ${gradient} text-white`}>
         <div className="max-w-4xl mx-auto px-4 py-10 md:py-14">
           <div className="flex items-center gap-5">
-            {/* Avatar circle */}
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-3xl md:text-4xl font-extrabold shrink-0 border-2 border-white/30">
-              {player.nameEn.charAt(0)}
-            </div>
+            {/* Avatar */}
+            <PlayerAvatar
+              photoUrl={player.photoUrl}
+              initial={player.nameEn.charAt(0)}
+              name={player.name}
+            />
             <div>
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${badge}`}>
