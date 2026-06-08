@@ -14,6 +14,7 @@ export default function PlayerAvatar({ photoUrl, initial, name }: {
       <img
         src={photoUrl}
         alt={name}
+        referrerPolicy="no-referrer"
         className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover shrink-0 border-2 border-white/30 shadow-lg"
         onError={() => setImgError(true)}
       />
