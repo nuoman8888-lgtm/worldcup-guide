@@ -836,7 +836,7 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <button
           onClick={onBack}
-          className="text-sm text-white/50 hover:text-white/80 transition-colors"
+          className="text-sm text-white/60 hover:text-white transition-colors"
         >
           ← 返回 AI 预测
         </button>
@@ -920,10 +920,10 @@ export default function BracketView() {
   return (
     <div>
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-extrabold text-white mb-2">
+        <h1 className="text-3xl font-extrabold text-white/95 mb-2">
           🏆 淘汰赛预测器
         </h1>
-        <p className="text-white/40 text-sm">
+        <p className="text-white/55 text-sm">
           {mode === 'ai'
             ? `ELO 概率模拟 · ${SIM_COUNT.toLocaleString()} 次蒙特卡洛推演（含完整小组赛）`
             : '逐场手动选择 · 点击球队晋级下一轮'}
