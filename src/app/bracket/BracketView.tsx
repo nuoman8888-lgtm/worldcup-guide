@@ -736,20 +736,25 @@ function FloatingProgressBar({ filled, total }: { filled: number; total: number 
   const pct = Math.round((filled / total) * 100);
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 py-3"
-      style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
+      className="fixed bottom-0 left-0 right-0 z-40 px-4 py-3 border-t"
+      style={{
+        background: 'rgba(7,20,38,0.95)',
+        backdropFilter: 'blur(12px)',
+        borderColor: 'rgba(255,255,255,0.06)',
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))',
+      }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold text-gray-500 shrink-0 tabular-nums">
+        <span className="text-xs font-bold text-white/40 shrink-0 tabular-nums">
           {filled}/31 场
         </span>
-        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
           <div
-            className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-300"
-            style={{ width: `${pct}%` }}
+            className="h-full rounded-full transition-all duration-300"
+            style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #f6b100, #ffcc33)' }}
           />
         </div>
-        <span className="text-xs font-bold text-navy w-8 text-right tabular-nums">{pct}%</span>
+        <span className="text-xs font-bold text-amber-400 w-8 text-right tabular-nums">{pct}%</span>
       </div>
     </div>
   );
@@ -816,13 +821,21 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
   }
 
   const bracketRounds: RoundData[] = useMemo(() => [
-    { title: '32强', matches: R32.map(s => buildMatchNode(s, R32)) },
-    { title: '16强', matches: R16_M.map(s => buildMatchNode(s, R16_M)) },
-    { title: '8强', matches: QF_M.map(s => buildMatchNode(s, QF_M)) },
-    { title: '4强', matches: SF_M.map(s => buildMatchNode(s, SF_M)) },
-    { title: '决赛', matches: FINAL_M.map(s => buildMatchNode(s, FINAL_M)) },
+    { title: '32强', subtitle: 'ROUND OF 32', matches: R32.map(s => buildMatchNode(s, R32)) },
+    { title: '16强', subtitle: 'ROUND OF 16', matches: R16_M.map(s => buildMatchNode(s, R16_M)) },
+    { title: '8强', subtitle: 'QUARTER FINAL', matches: QF_M.map(s => buildMatchNode(s, QF_M)) },
+    { title: '4强', subtitle: 'SEMI FINAL', matches: SF_M.map(s => buildMatchNode(s, SF_M)) },
+    { title: '决赛', subtitle: 'FINAL', matches: FINAL_M.map(s => buildMatchNode(s, FINAL_M)) },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [picks]);
+
+  // Champion probability (simple heuristic based on ELO)
+  const championProb = useMemo(() => {
+    if (!champion) return 0;
+    const top = [...teams].sort((a, b) => b.elo - a.elo);
+    const idx = top.findIndex(t => t.id === champion.id);
+    return Math.max(2, Math.round(40 - idx * 1.5));
+  }, [champion]);
 
   const filled = [...R32, ...R16_M, ...QF_M, ...SF_M, ...FINAL_M].filter(
     s => picks[s.id]
@@ -836,32 +849,39 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <button
           onClick={onBack}
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="text-sm text-white/40 hover:text-white/70 transition-colors"
         >
           ← 返回 AI 预测
         </button>
         <div className="flex items-center gap-2">
           <button
             onClick={quickPredict}
-            className="px-4 py-2 bg-navy text-white rounded-lg text-sm font-bold hover:bg-navy-light transition-colors shadow-md"
+            className="px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-amber-500/20 text-[#08111f]"
+            style={{
+              background: 'linear-gradient(135deg, #f6b100, #ffda5c)',
+              transform: 'translateY(-1px)',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 8px 24px rgba(255,193,7,0.35)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,193,7,0.2)')}
           >
             ⚡ AI 一键填充
           </button>
           <button
             onClick={reset}
-            className="px-4 py-2 bg-white text-gray-600 rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium border transition-colors text-white/60 border-white/10 hover:bg-white/[0.06] hover:text-white/80"
+            style={{ background: 'rgba(255,255,255,0.03)' }}
           >
             🔄 重置
           </button>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs text-gray-400">
-          <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="hidden md:flex items-center gap-2 text-xs text-white/30">
+          <div className="w-20 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
             <div
-              className="h-full bg-amber-400 rounded-full transition-all"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full transition-all"
+              style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #f6b100, #ffcc33)' }}
             />
           </div>
-          <span className="tabular-nums font-bold text-gray-500">{progress}%</span>
+          <span className="tabular-nums font-bold text-white/50">{progress}%</span>
         </div>
       </div>
 
@@ -885,12 +905,18 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
               setShareCopied(true);
               setTimeout(() => setShareCopied(false), 2000);
             }}
-            className="px-6 py-3 bg-gradient-to-r from-navy to-navy-light text-white rounded-xl text-sm font-bold hover:shadow-lg transition-all shadow-md"
+            className="px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg text-[#08111f]"
+            style={{
+              background: 'linear-gradient(135deg, #f6b100, #ffda5c)',
+              transform: 'translateY(-1px)',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 8px 24px rgba(255,193,7,0.35)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,193,7,0.2)')}
           >
             {shareCopied ? '✅ 链接已复制！' : '📤 分享我的预测'}
           </button>
           {shareCopied && (
-            <p className="text-xs text-green-600 mt-2 font-medium">
+            <p className="text-xs text-amber-400/70 mt-2 font-medium">
               链接已复制到剪贴板，发送给朋友即可
             </p>
           )}
@@ -901,6 +927,7 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
       <BracketTree
         rounds={bracketRounds}
         champion={champion ? { flag: champion.flag, name: champion.name, nameEn: champion.nameEn } : null}
+        championProb={championProb}
         totalFilled={filled}
         totalSlots={total}
         onPick={(slotId, teamId) => pick(slotId, teamId)}
@@ -920,10 +947,10 @@ export default function BracketView() {
   return (
     <div>
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
-          🏆 淘汰赛预测器
+        <h1 className="text-3xl font-extrabold text-white mb-2">
+          🏆 世界杯冠军之路
         </h1>
-        <p className="text-gray-500 text-sm">
+        <p className="text-white/40 text-sm">
           {mode === 'ai'
             ? `ELO 概率模拟 · ${SIM_COUNT.toLocaleString()} 次蒙特卡洛推演（含完整小组赛）`
             : '逐场手动选择 · 点击球队晋级下一轮'}
