@@ -736,20 +736,20 @@ function FloatingProgressBar({ filled, total }: { filled: number; total: number 
   const pct = Math.round((filled / total) * 100);
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 bg-navy/95 backdrop-blur-sm border-t border-white/10 px-4 py-3"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 py-3"
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold text-white/60 shrink-0 tabular-nums">
+        <span className="text-xs font-bold text-gray-500 shrink-0 tabular-nums">
           {filled}/31 场
         </span>
-        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="text-xs font-bold text-amber-400 w-8 text-right tabular-nums">{pct}%</span>
+        <span className="text-xs font-bold text-navy w-8 text-right tabular-nums">{pct}%</span>
       </div>
     </div>
   );
@@ -836,32 +836,32 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <button
           onClick={onBack}
-          className="text-sm text-white/60 hover:text-white transition-colors"
+          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
         >
           ← 返回 AI 预测
         </button>
         <div className="flex items-center gap-2">
           <button
             onClick={quickPredict}
-            className="px-4 py-2 bg-amber-500 text-navy rounded-lg text-sm font-bold hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20"
+            className="px-4 py-2 bg-navy text-white rounded-lg text-sm font-bold hover:bg-navy-light transition-colors shadow-md"
           >
             ⚡ AI 一键填充
           </button>
           <button
             onClick={reset}
-            className="px-4 py-2 bg-white/10 text-white/80 rounded-lg text-sm font-medium border border-white/10 hover:bg-white/20 transition-colors"
+            className="px-4 py-2 bg-white text-gray-600 rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors"
           >
             🔄 重置
           </button>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs text-white/40">
-          <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
+        <div className="hidden md:flex items-center gap-2 text-xs text-gray-400">
+          <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-amber-400 rounded-full transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="tabular-nums font-bold text-white/60">{progress}%</span>
+          <span className="tabular-nums font-bold text-gray-500">{progress}%</span>
         </div>
       </div>
 
@@ -885,12 +885,12 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
               setShareCopied(true);
               setTimeout(() => setShareCopied(false), 2000);
             }}
-            className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-navy rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-amber-400/30 transition-all shadow-md shadow-amber-400/20"
+            className="px-6 py-3 bg-gradient-to-r from-navy to-navy-light text-white rounded-xl text-sm font-bold hover:shadow-lg transition-all shadow-md"
           >
             {shareCopied ? '✅ 链接已复制！' : '📤 分享我的预测'}
           </button>
           {shareCopied && (
-            <p className="text-xs text-amber-400/70 mt-2 font-medium">
+            <p className="text-xs text-green-600 mt-2 font-medium">
               链接已复制到剪贴板，发送给朋友即可
             </p>
           )}
@@ -920,10 +920,10 @@ export default function BracketView() {
   return (
     <div>
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-extrabold text-white/95 mb-2">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
           🏆 淘汰赛预测器
         </h1>
-        <p className="text-white/55 text-sm">
+        <p className="text-gray-500 text-sm">
           {mode === 'ai'
             ? `ELO 概率模拟 · ${SIM_COUNT.toLocaleString()} 次蒙特卡洛推演（含完整小组赛）`
             : '逐场手动选择 · 点击球队晋级下一轮'}
