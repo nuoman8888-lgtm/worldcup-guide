@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function BracketPage() {
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-gray-950">
-      <div className="max-w-full mx-auto px-2 sm:px-4 py-6 md:py-8">
+    <div className="min-h-screen bg-navy">
+      <div className="max-w-full mx-auto px-3 sm:px-4 py-4 md:py-6">
         <BracketClient />
       </div>
     </div>

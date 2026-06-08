@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Bracket, Seed, SeedItem } from 'react-brackets';
 import { getAllTeams, groups } from '@/data/teams';
 import { encodeShareData, getShareUrl } from '@/lib/share-utils';
 import BracketTree, { type RoundData, type MatchNodeData } from '@/components/BracketTree';
@@ -920,25 +919,25 @@ function AccordionSection({
   );
 }
 
-/** Fixed bottom progress bar — mobile only */
+/** Fixed bottom progress bar */
 function FloatingProgressBar({ filled, total }: { filled: number; total: number }) {
   const pct = Math.round((filled / total) * 100);
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 py-3 md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-navy/95 backdrop-blur-sm border-t border-white/10 px-4 py-3"
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold text-gray-600 shrink-0 tabular-nums">
-          已完成 {filled}/31
+        <span className="text-xs font-bold text-white/60 shrink-0 tabular-nums">
+          {filled}/31 场
         </span>
-        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gold rounded-full transition-all duration-300"
+            className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="text-xs font-bold text-gray-500 w-8 text-right tabular-nums">{pct}%</span>
+        <span className="text-xs font-bold text-amber-400 w-8 text-right tabular-nums">{pct}%</span>
       </div>
     </div>
   );
@@ -1033,8 +1032,8 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [picks]);
 
-  // ── Build RoundData for BracketTree visualization ──
-  function buildMatchNode(slot: Slot, label: string, roundSlots: Slot[]): MatchNodeData {
+  // ── Build MatchNodeData for BracketTree ──
+  function buildMatchNode(slot: Slot, roundSlots: Slot[]): MatchNodeData {
     const w = winnerOf(slot.id);
     let t1: Team | null = null, t2: Team | null = null;
     if (slot.feedsFrom.length === 2) {
@@ -1047,7 +1046,6 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
     }
     return {
       id: slot.id,
-      label,
       teamA: t1 ? { id: t1.id, name: t1.name, flag: t1.flag } : null,
       teamB: t2 ? { id: t2.id, name: t2.name, flag: t2.flag } : null,
       winner: w?.id || null,
@@ -1055,17 +1053,12 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
     };
   }
 
-  const R32_LABELS_SHORT = Array.from({ length: 16 }, (_, i) => `M${i + 1}`);
-  const R16_LABELS_SHORT = ['R16-①','R16-②','R16-③','R16-④','R16-⑤','R16-⑥','R16-⑦','R16-⑧'];
-  const QF_LABELS_SHORT = ['QF-①','QF-②','QF-③','QF-④'];
-  const SF_LABELS_SHORT = ['SF-①','SF-②'];
-
   const bracketRounds: RoundData[] = useMemo(() => [
-    { title: '32强', matches: R32.map((s, i) => buildMatchNode(s, R32_LABELS_SHORT[i], R32)) },
-    { title: '16强', matches: R16_M.map((s, i) => buildMatchNode(s, R16_LABELS_SHORT[i], R16_M)) },
-    { title: '¼决赛', matches: QF_M.map((s, i) => buildMatchNode(s, QF_LABELS_SHORT[i], QF_M)) },
-    { title: '半决赛', matches: SF_M.map((s, i) => buildMatchNode(s, SF_LABELS_SHORT[i], SF_M)) },
-    { title: '决赛', matches: FINAL_M.map(s => buildMatchNode(s, '🏆 Final', FINAL_M)) },
+    { title: '32 强', matches: R32.map(s => buildMatchNode(s, R32)) },
+    { title: '16 强', matches: R16_M.map(s => buildMatchNode(s, R16_M)) },
+    { title: '¼ 决赛', matches: QF_M.map(s => buildMatchNode(s, QF_M)) },
+    { title: '半决赛', matches: SF_M.map(s => buildMatchNode(s, SF_M)) },
+    { title: '决赛', matches: FINAL_M.map(s => buildMatchNode(s, FINAL_M)) },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [picks]);
 
@@ -1088,56 +1081,41 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
   return (
     <div className="max-w-full">
       {/* Back + Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <button
           onClick={onBack}
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-white/50 hover:text-white/80 transition-colors"
         >
           ← 返回 AI 预测
         </button>
         <div className="flex items-center gap-2">
           <button
             onClick={quickPredict}
-            className="px-4 py-2 bg-navy text-white rounded-lg text-sm font-bold hover:bg-navy-light transition-colors"
+            className="px-4 py-2 bg-amber-500 text-navy rounded-lg text-sm font-bold hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20"
           >
-            ⚡ AI 填充
+            ⚡ AI 一键填充
           </button>
           <button
             onClick={reset}
-            className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 bg-white/10 text-white/80 rounded-lg text-sm font-medium border border-white/10 hover:bg-white/20 transition-colors"
           >
             🔄 重置
           </button>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
-          <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="hidden md:flex items-center gap-2 text-xs text-white/40">
+          <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gold rounded-full transition-all"
+              className="h-full bg-amber-400 rounded-full transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="tabular-nums font-bold">{progress}%</span>
+          <span className="tabular-nums font-bold text-white/60">{progress}%</span>
         </div>
       </div>
 
-      {/* Champion */}
-      {champion && (
-        <div
-          className="mb-4 rounded-xl p-4 text-center max-w-sm mx-auto"
-          style={{
-            background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-            border: '2px solid #D4AF37',
-          }}
-        >
-          <div className="text-lg font-extrabold text-navy">
-            🏆 {champion.flag} {champion.name}
-          </div>
-        </div>
-      )}
-
       {/* Share button — only when 100% complete */}
       {filled === total && (
-        <div className="mb-6 text-center">
+        <div className="mb-4 text-center">
           <button
             onClick={async () => {
               const encoded = encodeShareData(picks);
@@ -1155,156 +1133,27 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
               setShareCopied(true);
               setTimeout(() => setShareCopied(false), 2000);
             }}
-            className="px-6 py-3 bg-gradient-to-r from-navy to-navy-light text-white rounded-xl text-sm font-bold hover:shadow-lg transition-all shadow-sm"
+            className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-navy rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-amber-400/30 transition-all shadow-md shadow-amber-400/20"
           >
             {shareCopied ? '✅ 链接已复制！' : '📤 分享我的预测'}
           </button>
           {shareCopied && (
-            <p className="text-xs text-green-600 mt-2 font-medium">
+            <p className="text-xs text-amber-400/70 mt-2 font-medium">
               链接已复制到剪贴板，发送给朋友即可
             </p>
           )}
         </div>
       )}
 
-      {/* Desktop: Bracket Tree */}
-      <div className="hidden md:block">
-        <div className="overflow-x-auto scrollbar-hide pb-6">
-          <div className="inline-block min-w-[820px] w-full">
-            <Bracket
-            rounds={roundData as any}
-            roundTitleComponent={(title: string) => (
-              <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    background:
-                      title === '决赛'
-                        ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
-                        : '#e2e8f0',
-                    padding: '4px 12px',
-                    borderRadius: 16,
-                    border:
-                      title === '决赛' ? '1px solid #D4AF37' : 'none',
-                  }}
-                >
-                  {title === '决赛' ? '🏆 ' : ''}
-                  {title}
-                </span>
-              </div>
-            )}
-            renderSeedComponent={({ seed }: any) => {
-              const s = seed as SeedData;
-              return (
-                <Seed mobileBreakpoint={0}>
-                  <SeedItem
-                    style={{
-                      background: s.isFinal
-                        ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
-                        : s.winner
-                          ? '#f1f5f9'
-                          : '#fff',
-                      border: s.isFinal
-                        ? '2px solid #D4AF37'
-                        : '1px solid #cbd5e1',
-                      borderRadius: 12,
-                      padding: 0,
-                      minWidth: 140,
-                      boxShadow: s.isFinal
-                        ? '0 4px 16px rgba(212,175,55,0.2)'
-                        : '0 1px 4px rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    <div style={{ padding: '4px 10px 6px' }}>
-                      {s.teams.map((team: any, ti: number) => (
-                        <div
-                          key={ti}
-                          onClick={() => {
-                            if (s.canClick && team.id) pick(s.id, team.id);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            padding: '4px 8px',
-                            cursor: s.canClick && team.id ? 'pointer' : 'default',
-                            borderRadius: 8,
-                            marginBottom: ti === 0 ? 2 : 0,
-                            background: team.winner
-                              ? 'linear-gradient(135deg,#fde68a,#fef3c7)'
-                              : s.canClick && team.id
-                                ? '#f1f5f9'
-                                : 'transparent',
-                            border: team.winner
-                              ? '1px solid #D4AF37'
-                              : '1px solid transparent',
-                            fontWeight: team.winner ? 700 : 500,
-                            color: team.winner
-                              ? '#92400e'
-                              : team.name === '待定'
-                                ? '#94a3b8'
-                                : '#0f172a',
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 18,
-                              width: 26,
-                              textAlign: 'center',
-                            }}
-                          >
-                            {team.flag}
-                          </span>
-                          <span
-                            style={{
-                              flex: 1,
-                              fontSize: 11,
-                              fontWeight: team.winner ? 700 : 600,
-                            }}
-                          >
-                            {team.name}
-                          </span>
-                          {team.winner && (
-                            <span style={{ color: '#D4AF37' }}>✓</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {s.winner && (
-                      <div
-                        style={{
-                          textAlign: 'center',
-                          padding: '0 10px 6px',
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: '#92400e',
-                        }}
-                      >
-                        {s.winner.flag} 晋级
-                      </div>
-                    )}
-                  </SeedItem>
-                </Seed>
-              );
-            }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile & Tablet: BracketTree (visual knockout tree) */}
-      <div className="md:hidden">
-        <BracketTree
-          rounds={bracketRounds}
-          champion={champion ? { flag: champion.flag, name: champion.name, nameEn: champion.nameEn } : null}
-          totalFilled={filled}
-          totalSlots={total}
-          onPick={(slotId, teamId) => pick(slotId, teamId)}
-        />
-        <FloatingProgressBar filled={filled} total={31} />
-      </div>
+      {/* BracketTree — all screen sizes */}
+      <BracketTree
+        rounds={bracketRounds}
+        champion={champion ? { flag: champion.flag, name: champion.name, nameEn: champion.nameEn } : null}
+        totalFilled={filled}
+        totalSlots={total}
+        onPick={(slotId, teamId) => pick(slotId, teamId)}
+      />
+      <FloatingProgressBar filled={filled} total={31} />
     </div>
   );
 }
@@ -1319,13 +1168,13 @@ export default function BracketView() {
   return (
     <div>
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
+        <h1 className="text-3xl font-extrabold text-white mb-2">
           🏆 淘汰赛预测器
         </h1>
-        <p className="text-gray-500 text-sm">
+        <p className="text-white/40 text-sm">
           {mode === 'ai'
             ? `ELO 概率模拟 · ${SIM_COUNT.toLocaleString()} 次蒙特卡洛推演（含完整小组赛）`
-            : '逐场手动选择 · 32场淘汰赛'}
+            : '逐场手动选择 · 点击球队晋级下一轮'}
         </p>
       </div>
 

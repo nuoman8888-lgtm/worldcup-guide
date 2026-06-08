@@ -1,15 +1,14 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback } from 'react';
 
 /* ═══════════════════════════════════════════════════
-   BracketTree — Visual knockout bracket (mobile-first)
-   Horizontal scroll + pinch zoom + tap-to-advance
+   BracketTree — 世界杯冠军之路 对阵树
+   Navy theme · Gold champion · Pure bracket layout
    ═══════════════════════════════════════════════════ */
 
 export interface MatchNodeData {
   id: string;
-  label: string;
   teamA: { id: string; name: string; flag: string } | null;
   teamB: { id: string; name: string; flag: string } | null;
   winner: string | null;
@@ -21,161 +20,277 @@ export interface RoundData {
   matches: MatchNodeData[];
 }
 
-// ── Layout constants ──
-const COL_GAP = 34;        // gap between columns
-const NODE_W = 128;        // match node width (wider for readable names)
-const R32_H = 48;          // R32 match height (team row = 22px, good tap target)
-const R16_H = 96;          // R16 match height
-const QF_H = 192;          // QF match height
-const SF_H = 384;          // SF match height
-const FINAL_H = 768;       // Final match height (16×48=768, fits phone screen)
-const ROUND_HEADER_H = 24; // height for round column title
-const TOP_PAD = 6;         // top padding
+/* ── Layout ── */
+const NODE_W = 112;         // match node width
+const COL_GAP = 36;         // gap between columns
+const ROW_H = 24;           // single team row height
+const DIVIDER = 2;          // divider between two teams
+const MATCH_H = ROW_H * 2 + DIVIDER;  // 50px per match
+const HEADER_H = 28;        // round title
+const TOP_PAD = 8;
 
-function matchHeight(roundIdx: number): number {
-  return [R32_H, R16_H, QF_H, SF_H, FINAL_H][roundIdx] || R32_H;
+function roundMatchHeight(roundIdx: number): number {
+  // Each round has half the matches → double the height per match
+  return MATCH_H * Math.pow(2, roundIdx);
 }
 
-/** Y-center of match i in a given round */
-function matchY(roundIdx: number, i: number): number {
-  const h = matchHeight(roundIdx);
-  return TOP_PAD + ROUND_HEADER_H + h * i + h / 2;
+function matchTop(roundIdx: number, matchIdx: number): number {
+  const mh = roundMatchHeight(roundIdx);
+  return TOP_PAD + HEADER_H + mh * matchIdx;
 }
 
-/** SVG path for a bracket connection line */
-function connectorPath(
-  x1: number, y1: number,  // start: right edge of source match
-  x2: number, y2: number,  // end: left edge of target match
-): string {
-  const midX = (x1 + x2) / 2;
-  return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+function matchCenterY(roundIdx: number, matchIdx: number): number {
+  return matchTop(roundIdx, matchIdx) + roundMatchHeight(roundIdx) / 2;
 }
 
-/** SVG path for two siblings merging into one parent */
-function mergePath(
-  x1: number, y1a: number, y1b: number,  // two source Ys
-  x2: number, y2: number,                 // target Y
-): string {
-  const midX = (x1 + x2) / 2;
-  return [
-    `M ${x1} ${y1a} L ${midX} ${y1a} L ${midX} ${y2} L ${x2} ${y2}`,
-    `M ${x1} ${y1b} L ${midX} ${y1b} L ${midX} ${y2}`,
-  ].join(' ');
-}
+/* ── Zoom presets ── */
+const ZOOM_LEVELS = [0.8, 1.0, 1.2];
 
-// ── Zoom controls ──
-function ZoomControls({ scale, onZoomIn, onZoomOut, onReset }: {
-  scale: number; onZoomIn: () => void; onZoomOut: () => void; onReset: () => void;
-}) {
-  return (
-    <div className="fixed bottom-20 right-3 z-30 flex flex-col gap-1.5 md:hidden">
-      <button
-        onClick={onZoomIn}
-        className="w-9 h-9 bg-white/90 backdrop-blur border border-gray-200 rounded-lg flex items-center justify-center text-lg font-bold text-gray-700 shadow-sm active:bg-gray-100"
-        aria-label="放大"
-      >+</button>
-      <button
-        onClick={onReset}
-        className="w-9 h-9 bg-white/90 backdrop-blur border border-gray-200 rounded-lg flex items-center justify-center text-xs font-bold text-gray-500 shadow-sm active:bg-gray-100"
-        aria-label="重置缩放"
-      >1:1</button>
-      <button
-        onClick={onZoomOut}
-        className="w-9 h-9 bg-white/90 backdrop-blur border border-gray-200 rounded-lg flex items-center justify-center text-lg font-bold text-gray-700 shadow-sm active:bg-gray-100"
-        aria-label="缩小"
-      >−</button>
-    </div>
-  );
-}
-
-// ── Single Match Node ──
-function MatchNode({
-  match, roundIdx, matchIdx, totalInRound, onPick,
+/* ═══════════════════════════════ Team Row ═══════════════════════════════ */
+function TeamRow({
+  team,
+  isWinner,
+  canClick,
+  isFinal,
+  onClick,
 }: {
-  match: MatchNodeData;
-  roundIdx: number;
-  matchIdx: number;
-  totalInRound: number;
-  onPick: (slotId: string, teamId: string) => void;
+  team: { id: string; name: string; flag: string } | null;
+  isWinner: boolean;
+  canClick: boolean;
+  isFinal: boolean;
+  onClick: () => void;
 }) {
-  const h = matchHeight(roundIdx);
-  const isFinal = roundIdx === 4;
-  const hasWinner = !!match.winner;
-
-  function teamRow(team: { id: string; name: string; flag: string } | null, isTop: boolean) {
-    const isWinner = team && match.winner === team.id;
-    const clickable = match.canClick && team && team.id;
-    const flagSize = roundIdx === 4 ? '1.5rem' : roundIdx >= 2 ? '1.1rem' : '1.2rem';
-
+  if (!team) {
     return (
-      <button
-        onClick={() => clickable && onPick(match.id, team!.id)}
-        disabled={!clickable}
-        className={[
-          'flex items-center gap-2 px-2 rounded-md transition-all w-full text-left',
-          isTop ? 'rounded-t-md' : 'rounded-b-md',
-          isWinner
-            ? 'bg-amber-100 border border-amber-400 shadow-sm'
-            : clickable
-              ? 'bg-white border border-gray-200 hover:bg-amber-50 hover:border-amber-300 active:scale-[0.97] cursor-pointer shadow-sm'
-              : 'bg-gray-100/50 border border-gray-150',
-          team ? '' : 'opacity-40',
-        ].join(' ')}
-        style={{
-          height: `calc(50% - 1px)`,
-        }}
-        aria-label={team ? `选择 ${team.name}` : '待定'}
+      <div
+        className="flex items-center gap-1.5 px-2 opacity-30"
+        style={{ height: ROW_H }}
       >
-        {/* Flag */}
-        <span className="shrink-0 leading-none text-center" style={{ fontSize: flagSize, width: '1.5rem' }}>
-          {team?.flag || '❓'}
-        </span>
-        {/* Name */}
-        <span className={[
-          'truncate leading-tight font-semibold flex-1',
-          isWinner ? 'text-amber-800' : team ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400',
-        ].join(' ')}
-        style={{ fontSize: roundIdx >= 3 ? '0.7rem' : '0.75rem' }}>
-          {team?.name || '待定'}
-        </span>
-        {/* Checkmark */}
-        {isWinner && (
-          <span className="text-amber-600 text-xs shrink-0 font-bold">✓</span>
-        )}
-      </button>
+        <span className="text-sm w-5 text-center">—</span>
+        <span className="text-[11px] text-gray-400">待定</span>
+      </div>
     );
   }
 
   return (
+    <button
+      onClick={canClick ? onClick : undefined}
+      disabled={!canClick}
+      className={[
+        'flex items-center gap-1.5 px-2 w-full text-left transition-all duration-150 select-none',
+        isWinner
+          ? 'bg-amber-400/20 border-l-[3px] border-amber-400'
+          : canClick
+            ? 'hover:bg-white/10 active:bg-amber-400/10 cursor-pointer'
+            : '',
+      ].join(' ')}
+      style={{ height: ROW_H }}
+    >
+      <span
+        className="shrink-0 text-center leading-none"
+        style={{ fontSize: isFinal ? '1.2rem' : '1rem', width: '1.5rem' }}
+      >
+        {team.flag}
+      </span>
+      <span
+        className={[
+          'truncate leading-tight font-medium',
+          isWinner
+            ? 'text-amber-400 font-bold'
+            : 'text-white/90',
+        ].join(' ')}
+        style={{ fontSize: isFinal ? '0.8rem' : '0.72rem' }}
+      >
+        {team.name}
+      </span>
+      {isWinner && (
+        <span className="text-amber-400 text-[10px] shrink-0 ml-auto mr-0.5">▶</span>
+      )}
+    </button>
+  );
+}
+
+/* ═══════════════════════════════ Match Node ═══════════════════════════════ */
+function MatchNode({
+  match,
+  roundIdx,
+  matchIdx,
+  onPick,
+}: {
+  match: MatchNodeData;
+  roundIdx: number;
+  matchIdx: number;
+  onPick: (slotId: string, teamId: string) => void;
+}) {
+  const mh = roundMatchHeight(roundIdx);
+  const isFinal = roundIdx === 4;
+
+  return (
     <div
-      className="absolute left-0 flex flex-col"
+      className="absolute left-0"
       style={{
-        top: TOP_PAD + ROUND_HEADER_H + h * matchIdx,
+        top: matchTop(roundIdx, matchIdx),
         width: NODE_W,
-        height: h,
+        height: mh,
       }}
     >
-      {/* Match label */}
       <div
-        className="absolute text-[10px] font-bold text-gray-400 dark:text-gray-500 w-full text-center whitespace-nowrap leading-none"
-        style={{ top: -12, height: 12 }}
+        className={[
+          'flex flex-col rounded-lg overflow-hidden border w-full h-full',
+          isFinal
+            ? 'border-amber-500/60 bg-white/5 backdrop-blur'
+            : 'border-white/10 bg-white/5',
+        ].join(' ')}
       >
-        {match.label}
-      </div>
-      <div className="flex flex-col h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
-        {teamRow(match.teamA, true)}
-        {/* VS divider */}
-        <div className="flex items-center justify-center h-0 relative z-10">
-          <span className="absolute text-[10px] text-gray-400 font-bold bg-white dark:bg-gray-900 px-2 rounded-full">VS</span>
-          <div className="w-full border-t border-gray-150 dark:border-gray-700" />
-        </div>
-        {teamRow(match.teamB, false)}
+        <TeamRow
+          team={match.teamA}
+          isWinner={match.winner === match.teamA?.id}
+          canClick={match.canClick && !!match.teamA}
+          isFinal={isFinal}
+          onClick={() => match.teamA && onPick(match.id, match.teamA.id)}
+        />
+        {/* Divider */}
+        <div className="w-full border-t border-white/10" style={{ height: DIVIDER }} />
+        <TeamRow
+          team={match.teamB}
+          isWinner={match.winner === match.teamB?.id}
+          canClick={match.canClick && !!match.teamB}
+          isFinal={isFinal}
+          onClick={() => match.teamB && onPick(match.id, match.teamB.id)}
+        />
       </div>
     </div>
   );
 }
 
-// ── Main BracketTree Component ──
+/* ═══════════════════════════ Zoom Controls ═══════════════════════════════ */
+function ZoomControls({
+  scale, onChange,
+}: {
+  scale: number; onChange: (s: number) => void;
+}) {
+  return (
+    <div className="fixed bottom-24 right-3 z-30 flex flex-col gap-1.5 md:bottom-6">
+      {ZOOM_LEVELS.map(level => (
+        <button
+          key={level}
+          onClick={() => onChange(level)}
+          className={[
+            'w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all shadow-lg border',
+            scale === level
+              ? 'bg-amber-400 text-navy border-amber-400'
+              : 'bg-navy-light/90 text-white/70 border-white/10 hover:bg-navy-light hover:text-white',
+          ].join(' ')}
+          aria-label={`缩放 ${Math.round(level * 100)}%`}
+        >
+          {Math.round(level * 100)}%
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════ SVG Connections ═══════════════════════════════ */
+function Connections({ rounds }: { rounds: RoundData[] }) {
+  const lines: { d: string; key: string }[] = [];
+
+  for (let r = 0; r < rounds.length - 1; r++) {
+    const currCount = rounds[r].matches.length;
+    const nextCount = rounds[r + 1].matches.length;
+    const fromX = r * (NODE_W + COL_GAP) + NODE_W;
+    const toX = (r + 1) * (NODE_W + COL_GAP);
+
+    for (let i = 0; i < nextCount; i++) {
+      const a = i * 2;
+      const b = i * 2 + 1;
+      const yA = matchCenterY(r, a);
+      const yB = matchCenterY(r, b);
+      const yTarget = matchCenterY(r + 1, i);
+      const midX = (fromX + toX) / 2;
+
+      lines.push({
+        d: [
+          `M ${fromX} ${yA} L ${midX} ${yA} L ${midX} ${yTarget} L ${toX} ${yTarget}`,
+          `M ${fromX} ${yB} L ${midX} ${yB} L ${midX} ${yTarget}`,
+        ].join(' '),
+        key: `c-${r}-${i}`,
+      });
+    }
+  }
+
+  // Champion connection
+  if (rounds.length > 0) {
+    const lastR = rounds.length - 1;
+    const finalX = lastR * (NODE_W + COL_GAP) + NODE_W;
+    const finalY = matchCenterY(lastR, 0);
+    const champX = (lastR + 1) * (NODE_W + COL_GAP);
+    lines.push({
+      d: `M ${finalX} ${finalY} L ${champX} ${finalY}`,
+      key: 'c-champ',
+    });
+  }
+
+  const svgW = rounds.length * (NODE_W + COL_GAP) + 160;
+  const svgH = TOP_PAD + HEADER_H + MATCH_H * Math.pow(2, rounds.length - 1 || 0) * (rounds[0]?.matches.length || 1);
+
+  return (
+    <svg
+      className="absolute inset-0 pointer-events-none"
+      style={{ width: svgW, height: svgH, zIndex: 0 }}
+    >
+      {lines.map(l => (
+        <path
+          key={l.key}
+          d={l.d}
+          fill="none"
+          stroke="rgba(148,163,184,0.25)"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
+    </svg>
+  );
+}
+
+/* ═══════════════════════════ Champion Card ═══════════════════════════════ */
+function ChampionCard({
+  champion, x, totalH,
+}: {
+  champion: { flag: string; name: string; nameEn: string };
+  x: number; totalH: number;
+}) {
+  return (
+    <div
+      className="absolute flex items-center justify-center"
+      style={{ left: x, top: 0, width: 130, height: totalH }}
+    >
+      <div
+        className="text-center px-5 py-6 rounded-2xl"
+        style={{
+          background: 'linear-gradient(145deg, rgba(251,191,36,0.15) 0%, rgba(245,158,11,0.08) 100%)',
+          border: '1.5px solid rgba(251,191,36,0.4)',
+          boxShadow: '0 0 40px rgba(251,191,36,0.12), 0 0 80px rgba(251,191,36,0.06)',
+        }}
+      >
+        <div className="text-[10px] font-bold tracking-widest uppercase text-amber-400/70 mb-2">
+          🏆 Champion
+        </div>
+        <div className="text-5xl mb-2 drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]">
+          {champion.flag}
+        </div>
+        <div className="text-base font-extrabold text-white mb-0.5">
+          {champion.name}
+        </div>
+        <div className="text-[11px] text-white/40">
+          {champion.nameEn}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════ Main Component ═══════════════════════════════ */
 export default function BracketTree({
   rounds,
   champion,
@@ -190,95 +305,36 @@ export default function BracketTree({
   onPick: (slotId: string, teamId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [initialScrollDone, setInitialScrollDone] = useState(false);
+  const [scale, setScale] = useState(1.0);
 
-  const totalWidth = rounds.length * (NODE_W + COL_GAP) + 140; // +140 for champion area
-  const totalHeight = TOP_PAD + ROUND_HEADER_H + FINAL_H;
+  const lastRoundIdx = rounds.length - 1;
+  const totalHeight = TOP_PAD + HEADER_H + MATCH_H * Math.pow(2, lastRoundIdx) * (rounds[0]?.matches.length || 1);
+  const bracketWidth = rounds.length * (NODE_W + COL_GAP);
+  const totalWidth = bracketWidth + 160; // + champion area
 
-  // Zoom handlers
-  const zoomIn = useCallback(() => setScale(s => Math.min(2.5, +(s + 0.25).toFixed(2))), []);
-  const zoomOut = useCallback(() => setScale(s => Math.max(0.5, +(s - 0.25).toFixed(2))), []);
-  const zoomReset = useCallback(() => setScale(1), []);
-
-  // Initial auto-scroll: scroll to show first few R32 matches
-  useEffect(() => {
-    if (!initialScrollDone && scrollRef.current) {
-      // Start scrolled to the left (R32 side)
-      scrollRef.current.scrollLeft = 0;
-      setInitialScrollDone(true);
-    }
-  }, [initialScrollDone]);
-
-  // Build SVG connection lines
-  const buildConnections = () => {
-    const lines: { d: string; key: string }[] = [];
-
-    for (let r = 0; r < rounds.length - 1; r++) {
-      const currMatches = rounds[r].matches;
-      const nextMatches = rounds[r + 1].matches;
-      const currX = r * (NODE_W + COL_GAP) + NODE_W; // right edge of current column
-      const nextX = (r + 1) * (NODE_W + COL_GAP);     // left edge of next column
-
-      // Each pair of current matches feeds into one next match
-      for (let i = 0; i < nextMatches.length; i++) {
-        const a = i * 2;
-        const b = i * 2 + 1;
-        const y1a = matchY(r, a);
-        const y1b = matchY(r, b);
-        const y2 = matchY(r + 1, i);
-        lines.push({
-          d: mergePath(currX, y1a, y1b, nextX, y2),
-          key: `conn-${r}-${i}`,
-        });
-      }
-    }
-
-    // Final → Champion connection
-    if (champion && rounds.length > 0) {
-      const lastRound = rounds[rounds.length - 1];
-      const finalMatch = lastRound.matches[0];
-      if (finalMatch?.winner) {
-        const finalX = (rounds.length - 1) * (NODE_W + COL_GAP) + NODE_W;
-        const finalY = matchY(rounds.length - 1, 0);
-        const champX = rounds.length * (NODE_W + COL_GAP);
-        lines.push({
-          d: `M ${finalX} ${finalY} L ${champX} ${finalY}`,
-          key: 'conn-champion',
-        });
-      }
-    }
-
-    return lines;
-  };
-
-  const connections = buildConnections();
-
-  // Scroll hint: auto-scroll right to show champion when bracket is complete
-  const autoScrollToChampion = () => {
-    if (scrollRef.current && totalFilled >= totalSlots) {
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({
-          left: totalWidth - (scrollRef.current?.clientWidth || 375) / 2,
-          behavior: 'smooth',
-        });
-      }, 300);
-    }
-  };
+  const zoomIn = useCallback(() => {
+    const idx = ZOOM_LEVELS.indexOf(scale);
+    if (idx < ZOOM_LEVELS.length - 1) setScale(ZOOM_LEVELS[idx + 1]);
+  }, [scale]);
+  const zoomOut = useCallback(() => {
+    const idx = ZOOM_LEVELS.indexOf(scale);
+    if (idx > 0) setScale(ZOOM_LEVELS[idx - 1]);
+  }, [scale]);
 
   return (
     <div className="relative">
-      {/* Zoom controls (mobile) */}
-      <ZoomControls scale={scale} onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={zoomReset} />
+      {/* Zoom controls */}
+      <ZoomControls scale={scale} onChange={setScale} />
 
-      {/* Scrollable bracket container */}
+      {/* Scroll container */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto scrollbar-hide overscroll-x-contain"
+        className="overflow-x-auto overflow-y-auto scrollbar-hide overscroll-x-contain"
         style={{
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-x pan-y pinch-zoom',
-          paddingBottom: '80px',
+          maxHeight: 'calc(100vh - 200px)',
+          paddingBottom: '24px',
         }}
       >
         <div
@@ -291,26 +347,10 @@ export default function BracketTree({
             minWidth: totalWidth,
           }}
         >
-          {/* SVG Connection Lines */}
-          <svg
-            className="absolute inset-0 pointer-events-none"
-            style={{ width: totalWidth, height: totalHeight, zIndex: 0 }}
-          >
-            {connections.map(c => (
-              <path
-                key={c.key}
-                d={c.d}
-                fill="none"
-                stroke="#cbd5e1"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="dark:stroke-gray-600"
-              />
-            ))}
-          </svg>
+          {/* Connection lines */}
+          <Connections rounds={rounds} />
 
-          {/* Match Columns */}
+          {/* Match columns */}
           {rounds.map((round, roundIdx) => (
             <div
               key={roundIdx}
@@ -319,87 +359,68 @@ export default function BracketTree({
                 left: roundIdx * (NODE_W + COL_GAP),
                 top: 0,
                 width: NODE_W,
-                height: totalHeight,
               }}
             >
-              {/* Round title header */}
+              {/* Round title */}
               <div
-                className="absolute text-center w-full font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap"
+                className="absolute text-center w-full font-bold text-white/50 tracking-wider whitespace-nowrap"
                 style={{
                   top: TOP_PAD,
-                  height: ROUND_HEADER_H,
-                  fontSize: roundIdx === 4 ? '0.75rem' : '0.625rem',
-                  lineHeight: `${ROUND_HEADER_H}px`,
+                  height: HEADER_H,
+                  fontSize: roundIdx === 4 ? '0.7rem' : '0.6rem',
+                  lineHeight: `${HEADER_H}px`,
                 }}
               >
                 {round.title}
               </div>
+
               {round.matches.map((match, matchIdx) => (
                 <MatchNode
                   key={match.id}
                   match={match}
                   roundIdx={roundIdx}
                   matchIdx={matchIdx}
-                  totalInRound={round.matches.length}
                   onPick={onPick}
                 />
               ))}
             </div>
           ))}
 
-          {/* Champion Area */}
+          {/* Champion */}
           {champion && (
-            <div
-              className="absolute flex flex-col items-center justify-center"
-              style={{
-                left: rounds.length * (NODE_W + COL_GAP),
-                top: 0,
-                width: 120,
-                height: totalHeight,
-              }}
-            >
-              <div
-                className="text-center p-4 rounded-2xl"
-                style={{
-                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%)',
-                  border: '2px solid #D4AF37',
-                  boxShadow: '0 4px 20px rgba(212,175,55,0.25)',
-                }}
-              >
-                <div className="text-xs font-bold text-amber-700 mb-1">🏆 冠军</div>
-                <div className="text-4xl mb-1">{champion.flag}</div>
-                <div className="text-sm font-extrabold text-gray-900">{champion.name}</div>
-                <div className="text-[10px] text-gray-500">{champion.nameEn}</div>
-              </div>
-            </div>
+            <ChampionCard
+              champion={champion}
+              x={rounds.length * (NODE_W + COL_GAP)}
+              totalH={totalHeight}
+            />
           )}
 
-          {/* Champion placeholder when not yet selected */}
-          {!champion && rounds.length > 0 && (
+          {/* Empty champion placeholder */}
+          {!champion && (
             <div
-              className="absolute flex flex-col items-center justify-center"
+              className="absolute flex items-center justify-center"
               style={{
                 left: rounds.length * (NODE_W + COL_GAP),
                 top: 0,
-                width: 120,
+                width: 130,
                 height: totalHeight,
               }}
             >
-              <div className="text-center p-4 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 dark:bg-gray-800/30 dark:border-gray-700">
-                <div className="text-4xl mb-1 opacity-30">🏆</div>
-                <div className="text-xs text-gray-400 font-medium">等待晋级</div>
+              <div className="text-center opacity-20">
+                <div className="text-5xl mb-2">🏆</div>
+                <div className="text-[11px] text-white/40">等待冠军</div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Scroll hint arrow (mobile, when content overflows) */}
-      <div className="md:hidden absolute left-1/2 -translate-x-1/2 bottom-2 text-xs text-gray-400 flex items-center gap-1 pointer-events-none">
-        <span>← 滑动查看完整对阵树 →</span>
-      </div>
+      {/* Scroll hint */}
+      {totalFilled < 5 && (
+        <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 text-[11px] text-white/30 flex items-center gap-1 pointer-events-none">
+          <span>← 滑动查看 →</span>
+        </div>
+      )}
     </div>
   );
 }
-
-export { matchHeight, matchY, NODE_W, COL_GAP, R32_H, R16_H, QF_H, SF_H, FINAL_H, TOP_PAD, ROUND_HEADER_H };
