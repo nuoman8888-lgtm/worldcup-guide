@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Bracket, Seed, SeedItem } from 'react-brackets';
 import { getAllTeams, groups } from '@/data/teams';
 import { encodeShareData, getShareUrl } from '@/lib/share-utils';
+import BracketTree, { type RoundData, type MatchNodeData } from '@/components/BracketTree';
 import type { Team } from '@/data/teams';
 
 const teams = getAllTeams();
@@ -1032,6 +1033,42 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [picks]);
 
+  // ── Build RoundData for BracketTree visualization ──
+  function buildMatchNode(slot: Slot, label: string, roundSlots: Slot[]): MatchNodeData {
+    const w = winnerOf(slot.id);
+    let t1: Team | null = null, t2: Team | null = null;
+    if (slot.feedsFrom.length === 2) {
+      t1 = winnerOf(slot.feedsFrom[0]);
+      t2 = winnerOf(slot.feedsFrom[1]);
+    } else {
+      const idx = roundSlots.indexOf(slot);
+      t1 = top32[idx * 2] || null;
+      t2 = top32[idx * 2 + 1] || null;
+    }
+    return {
+      id: slot.id,
+      label,
+      teamA: t1 ? { id: t1.id, name: t1.name, flag: t1.flag } : null,
+      teamB: t2 ? { id: t2.id, name: t2.name, flag: t2.flag } : null,
+      winner: w?.id || null,
+      canClick: !w && !!t1 && !!t2,
+    };
+  }
+
+  const R32_LABELS_SHORT = Array.from({ length: 16 }, (_, i) => `M${i + 1}`);
+  const R16_LABELS_SHORT = ['R16-①','R16-②','R16-③','R16-④','R16-⑤','R16-⑥','R16-⑦','R16-⑧'];
+  const QF_LABELS_SHORT = ['QF-①','QF-②','QF-③','QF-④'];
+  const SF_LABELS_SHORT = ['SF-①','SF-②'];
+
+  const bracketRounds: RoundData[] = useMemo(() => [
+    { title: '32强', matches: R32.map((s, i) => buildMatchNode(s, R32_LABELS_SHORT[i], R32)) },
+    { title: '16强', matches: R16_M.map((s, i) => buildMatchNode(s, R16_LABELS_SHORT[i], R16_M)) },
+    { title: '¼决赛', matches: QF_M.map((s, i) => buildMatchNode(s, QF_LABELS_SHORT[i], QF_M)) },
+    { title: '半决赛', matches: SF_M.map((s, i) => buildMatchNode(s, SF_LABELS_SHORT[i], SF_M)) },
+    { title: '决赛', matches: FINAL_M.map(s => buildMatchNode(s, '🏆 Final', FINAL_M)) },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [picks]);
+
   // ── Mobile sections: seed data for accordion panels ──
   const mobileSections = SECTION_DEFS.map(section => {
     const seeds = section.slots.map(slot => {
@@ -1257,21 +1294,15 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      {/* Mobile: Accordion Panels */}
-      <div className="md:hidden pb-20">
-        {mobileSections.map((section) => (
-          <AccordionSection
-            key={section.id}
-            title={section.title}
-            matchCount={section.matchCount}
-            completed={section.completed}
-            seeds={section.seeds}
-            labels={section.labels}
-            expanded={expandedSet.has(section.id)}
-            onToggle={() => setMobileSection(prev => prev === section.id ? null : section.id)}
-            onPick={(slotId, teamId) => pick(slotId, teamId)}
-          />
-        ))}
+      {/* Mobile & Tablet: BracketTree (visual knockout tree) */}
+      <div className="md:hidden">
+        <BracketTree
+          rounds={bracketRounds}
+          champion={champion ? { flag: champion.flag, name: champion.name, nameEn: champion.nameEn } : null}
+          totalFilled={filled}
+          totalSlots={total}
+          onPick={(slotId, teamId) => pick(slotId, teamId)}
+        />
         <FloatingProgressBar filled={filled} total={31} />
       </div>
     </div>
