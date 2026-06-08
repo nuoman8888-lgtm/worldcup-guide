@@ -1,10 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 /* ═══════════════════════════════════════════════════
    BracketTree — 世界杯冠军之路
-   Content-driven heights · Compact · No dead space
+   Responsive: compact on mobile, spacious on desktop
    ═══════════════════════════════════════════════════ */
 
 export interface MatchNodeData {
@@ -232,6 +232,14 @@ export default function BracketTree({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1.0);
+  const [ready, setReady] = useState(false);
+
+  // Auto-scale: compact on mobile, spacious on desktop
+  useEffect(() => {
+    const desktop = window.innerWidth >= 768;
+    setScale(desktop ? 1.5 : 1.0);
+    setReady(true);
+  }, []);
 
   const positions = computePositions(rounds);
   const lastR32Y = positions[0]?.[positions[0].length - 1] ?? 0;
