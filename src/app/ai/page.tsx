@@ -114,7 +114,16 @@ export default function AIPage() {
             <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-100">
               <div className="text-center mb-3">
                 <div className="text-3xl mb-2">{matchPrediction.home.flag} VS {matchPrediction.away.flag}</div>
-                <div className="text-xs text-gray-500 mb-2">AI预测比分: <strong>{matchPrediction.predictedScore}</strong></div>
+                <div className="text-xs text-gray-500 mb-1">AI预测比分: <strong>{matchPrediction.predictedScore}</strong></div>
+                {matchPrediction.topScores && matchPrediction.topScores.length > 0 && (
+                  <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
+                    {matchPrediction.topScores.map((s: {home: number; away: number; prob: number}, i: number) => (
+                      <span key={i} className="text-[11px] text-gray-500 bg-white/80 px-2 py-0.5 rounded-full">
+                        {s.home}:{s.away} <span className="font-semibold text-gray-700">({s.prob}%)</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="bg-white rounded-lg p-2">

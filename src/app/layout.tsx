@@ -55,6 +55,13 @@ export default function RootLayout({
           </div>
         </footer>
 
+        {/* Cloudflare Web Analytics */}
+        <Script
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon='{"token": "YOUR_CF_TOKEN_HERE"}'
+          strategy="afterInteractive"
+        />
+
         {/* Schema.org structured data */}
         <Script
           id="schema-org"

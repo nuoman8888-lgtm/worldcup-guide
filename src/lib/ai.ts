@@ -10,12 +10,45 @@ export interface MatchPrediction {
   predictedScore: string;
   confidence: 'high' | 'medium' | 'low';
   factors: PredictionFactor[];
+  topScores: { home: number; away: number; prob: number }[];
 }
 
 export interface PredictionFactor {
   label: string;
   impact: 'positive' | 'negative' | 'neutral';
   detail: string;
+}
+
+/** Poisson probability: P(k|λ) = λ^k * e^(-λ) / k! */
+function poissonProb(lambda: number, k: number): number {
+  if (lambda <= 0) return k === 0 ? 1 : 0;
+  let logP = -lambda + k * Math.log(lambda);
+  for (let i = 2; i <= k; i++) logP -= Math.log(i);
+  return Math.exp(logP);
+}
+
+/** Expected goals from ELO difference (realistic 0.3–3.5 range) */
+function expectedGoals(eloA: number, eloB: number): [number, number] {
+  const eloDiff = eloA - eloB;
+  const home = 1.35 + (eloDiff / 400) * 0.65;
+  const away = 1.15 - (eloDiff / 400) * 0.55;
+  return [
+    Math.max(0.25, Math.min(3.5, home)),
+    Math.max(0.2, Math.min(3.0, away)),
+  ];
+}
+
+/** Enumerate all 0–MAX score combos, sort by probability descending */
+const MAX_GOALS = 4;
+function mostLikelyScores(homeLambda: number, awayLambda: number): { home: number; away: number; prob: number }[] {
+  const scores: { home: number; away: number; prob: number }[] = [];
+  for (let h = 0; h <= MAX_GOALS; h++) {
+    for (let a = 0; a <= MAX_GOALS; a++) {
+      const p = poissonProb(homeLambda, h) * poissonProb(awayLambda, a);
+      scores.push({ home: h, away: a, prob: Math.round(p * 1000) / 10 });
+    }
+  }
+  return scores.sort((a, b) => b.prob - a.prob);
 }
 
 export function predictMatch(homeTeamId: string, awayTeamId: string): MatchPrediction {
@@ -28,6 +61,7 @@ export function predictMatch(homeTeamId: string, awayTeamId: string): MatchPredi
       predictedScore: '?-?',
       confidence: 'low',
       factors: [{ label: '数据不足', impact: 'neutral', detail: '无法获取完整球队数据' }],
+      topScores: [],
     };
   }
 
@@ -88,13 +122,11 @@ export function predictMatch(homeTeamId: string, awayTeamId: string): MatchPredi
   drawProb = Math.max(0, Math.min(100, Math.round(drawProb * 10) / 10));
   awayWinProb = Math.max(0, Math.min(100, Math.round(awayWinProb * 10) / 10));
 
-  // Deterministic predicted score (no Math.random)
-  const homeStrength = home.elo / 200;
-  const awayStrength = away.elo / 200;
-  const seed = (home.elo * 7 + away.elo * 13) % 100 / 100;
-  const homeGoals = Math.max(0, Math.round(homeStrength - awayStrength * 0.15 + seed * 0.5 + 0.4));
-  const awayGoals = Math.max(0, Math.round(awayStrength * 0.7 - homeStrength * 0.1 + (1 - seed) * 0.5));
-  const predictedScore = `${homeGoals}-${awayGoals}`;
+  // Poisson-distribution score prediction (realistic 0-4 goal range)
+  const [homeLambda, awayLambda] = expectedGoals(home.elo, away.elo);
+  const topScores = mostLikelyScores(homeLambda, awayLambda);
+  const best = topScores[0];
+  const predictedScore = `${best.home}-${best.away}`;
 
   // Confidence level
   const probGap = Math.abs(homeWinProb - awayWinProb);
@@ -143,7 +175,7 @@ export function predictMatch(homeTeamId: string, awayTeamId: string): MatchPredi
     factors.push({ label: '冠军底蕴', impact: 'positive', detail: `${home.name}曾${home.bestResult}` });
   }
 
-  return { homeWinProb, drawProb, awayWinProb, predictedScore, confidence, factors };
+  return { homeWinProb, drawProb, awayWinProb, predictedScore, confidence, factors, topScores: topScores.slice(0, 3) };
 }
 
 export interface AIAnswer {

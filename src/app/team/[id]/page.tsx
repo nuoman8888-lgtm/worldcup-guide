@@ -8,6 +8,8 @@ import { predictMatch } from '@/lib/ai';
 import { getChampionOdds } from '@/data/odds';
 import { searchPlayers } from '@/data/players';
 import RadarChart from '@/components/RadarChart';
+import TeamStories from '@/components/TeamStories';
+import storiesData from '@/data/team-stories.json';
 import type { Team } from '@/data/teams';
 
 // ── Flag-based hero colors for popular teams ──
@@ -180,6 +182,9 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                 ))}
               </div>
             </div>
+
+            {/* Team stories */}
+            <TeamStories stories={(storiesData as Record<string, {title: string; content: string}[]>)[team.id] || []} />
 
             {/* Recent form */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
