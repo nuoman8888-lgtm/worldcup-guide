@@ -22,15 +22,15 @@ export interface RoundData {
 }
 
 // ── Layout constants ──
-const COL_GAP = 28;        // gap between columns
-const NODE_W = 108;        // match node width
-const R32_H = 40;          // R32 match height (each team row = 18px)
-const R16_H = 80;          // R16 match height
-const QF_H = 160;          // QF match height
-const SF_H = 320;          // SF match height
-const FINAL_H = 640;       // Final match height
-const ROUND_HEADER_H = 20; // height for round column title
-const TOP_PAD = 4;         // top padding
+const COL_GAP = 34;        // gap between columns
+const NODE_W = 128;        // match node width (wider for readable names)
+const R32_H = 48;          // R32 match height (team row = 22px, good tap target)
+const R16_H = 96;          // R16 match height
+const QF_H = 192;          // QF match height
+const SF_H = 384;          // SF match height
+const FINAL_H = 768;       // Final match height (16×48=768, fits phone screen)
+const ROUND_HEADER_H = 24; // height for round column title
+const TOP_PAD = 6;         // top padding
 
 function matchHeight(roundIdx: number): number {
   return [R32_H, R16_H, QF_H, SF_H, FINAL_H][roundIdx] || R32_H;
@@ -105,41 +105,42 @@ function MatchNode({
   function teamRow(team: { id: string; name: string; flag: string } | null, isTop: boolean) {
     const isWinner = team && match.winner === team.id;
     const clickable = match.canClick && team && team.id;
+    const flagSize = roundIdx === 4 ? '1.5rem' : roundIdx >= 2 ? '1.1rem' : '1.2rem';
 
     return (
       <button
         onClick={() => clickable && onPick(match.id, team!.id)}
         disabled={!clickable}
         className={[
-          'flex items-center gap-1.5 px-1.5 rounded-md transition-all w-full text-left',
+          'flex items-center gap-2 px-2 rounded-md transition-all w-full text-left',
           isTop ? 'rounded-t-md' : 'rounded-b-md',
           isWinner
-            ? 'bg-amber-50 border border-amber-300 ring-1 ring-amber-300'
+            ? 'bg-amber-100 border border-amber-400 shadow-sm'
             : clickable
-              ? 'bg-gray-50/80 border border-gray-150 hover:bg-amber-50/50 hover:border-amber-200 active:scale-[0.97] cursor-pointer'
-              : 'bg-gray-50/30 border border-gray-100',
-          team ? '' : 'opacity-50',
+              ? 'bg-white border border-gray-200 hover:bg-amber-50 hover:border-amber-300 active:scale-[0.97] cursor-pointer shadow-sm'
+              : 'bg-gray-100/50 border border-gray-150',
+          team ? '' : 'opacity-40',
         ].join(' ')}
         style={{
-          height: Math.max(20, (h - 4) / 2 - 1),
+          height: `calc(50% - 1px)`,
         }}
         aria-label={team ? `选择 ${team.name}` : '待定'}
       >
         {/* Flag */}
-        <span className="text-sm shrink-0 leading-none w-5 text-center" style={{ fontSize: roundIdx === 4 ? '1.25rem' : '0.875rem' }}>
+        <span className="shrink-0 leading-none text-center" style={{ fontSize: flagSize, width: '1.5rem' }}>
           {team?.flag || '❓'}
         </span>
         {/* Name */}
         <span className={[
-          'truncate text-xs leading-tight font-medium',
-          isWinner ? 'text-amber-800 font-bold' : team ? 'text-gray-800' : 'text-gray-400',
-          roundIdx >= 2 ? 'text-[11px]' : '',
-        ].join(' ')}>
+          'truncate leading-tight font-semibold flex-1',
+          isWinner ? 'text-amber-800' : team ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400',
+        ].join(' ')}
+        style={{ fontSize: roundIdx >= 3 ? '0.7rem' : '0.75rem' }}>
           {team?.name || '待定'}
         </span>
         {/* Checkmark */}
         {isWinner && (
-          <span className="text-amber-500 text-[10px] shrink-0 ml-auto">✓</span>
+          <span className="text-amber-600 text-xs shrink-0 font-bold">✓</span>
         )}
       </button>
     );
@@ -156,17 +157,17 @@ function MatchNode({
     >
       {/* Match label */}
       <div
-        className="absolute text-[9px] font-semibold text-gray-400 w-full text-center whitespace-nowrap leading-none"
-        style={{ top: -10, height: 10 }}
+        className="absolute text-[10px] font-bold text-gray-400 dark:text-gray-500 w-full text-center whitespace-nowrap leading-none"
+        style={{ top: -12, height: 12 }}
       >
         {match.label}
       </div>
-      <div className="flex flex-col gap-px h-full">
+      <div className="flex flex-col h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
         {teamRow(match.teamA, true)}
         {/* VS divider */}
-        <div className="flex items-center justify-center h-0 relative">
-          <span className="absolute text-[9px] text-gray-300 font-bold bg-white px-1">VS</span>
-          <div className="w-full border-t border-gray-100" />
+        <div className="flex items-center justify-center h-0 relative z-10">
+          <span className="absolute text-[10px] text-gray-400 font-bold bg-white dark:bg-gray-900 px-2 rounded-full">VS</span>
+          <div className="w-full border-t border-gray-150 dark:border-gray-700" />
         </div>
         {teamRow(match.teamB, false)}
       </div>
