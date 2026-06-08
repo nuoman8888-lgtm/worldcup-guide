@@ -705,219 +705,31 @@ const R32: Slot[] = Array.from({ length: 16 }, (_, i) => ({
   id: `r32-${i + 1}`, date: '', time: '', city: '', feedsFrom: [],
 }));
 
-// FIFA 2026 official R16 feedsFrom (R32 1-based IDs)
-const R16_M: Slot[] = [
-  { id: 'r16-1', date: '', time: '', city: '', feedsFrom: ['r32-4', 'r32-6'] },    // R32[3],[5]
-  { id: 'r16-2', date: '', time: '', city: '', feedsFrom: ['r32-13', 'r32-10'] },   // R32[12],[9]
-  { id: 'r16-3', date: '', time: '', city: '', feedsFrom: ['r32-16', 'r32-11'] },   // R32[15],[10]
-  { id: 'r16-4', date: '', time: '', city: '', feedsFrom: ['r32-3', 'r32-5'] },     // R32[2],[4]
-  { id: 'r16-5', date: '', time: '', city: '', feedsFrom: ['r32-9', 'r32-15'] },    // R32[8],[14]
-  { id: 'r16-6', date: '', time: '', city: '', feedsFrom: ['r32-1', 'r32-8'] },     // R32[0],[7]
-  { id: 'r16-7', date: '', time: '', city: '', feedsFrom: ['r32-12', 'r32-14'] },   // R32[11],[13]
-  { id: 'r16-8', date: '', time: '', city: '', feedsFrom: ['r32-2', 'r32-7'] },     // R32[1],[6]
-];
+// Simple sequential bracket: adjacent matches feed into next round
+// M1+M2 → R16-1, M3+M4 → R16-2, ... M15+M16 → R16-8
+const R16_M: Slot[] = Array.from({ length: 8 }, (_, i) => ({
+  id: `r16-${i + 1}`, date: '', time: '', city: '',
+  feedsFrom: [`r32-${i * 2 + 1}`, `r32-${i * 2 + 2}`],
+}));
 
-// FIFA 2026 official QF feedsFrom (R16 IDs)
-const QF_M: Slot[] = [
-  { id: 'qf-1', date: '', time: '', city: '', feedsFrom: ['r16-1', 'r16-2'] },
-  { id: 'qf-2', date: '', time: '', city: '', feedsFrom: ['r16-3', 'r16-4'] },
-  { id: 'qf-3', date: '', time: '', city: '', feedsFrom: ['r16-5', 'r16-6'] },
-  { id: 'qf-4', date: '', time: '', city: '', feedsFrom: ['r16-7', 'r16-8'] },
-];
+// QF: R16-1+R16-2 → QF-1, R16-3+R16-4 → QF-2, etc.
+const QF_M: Slot[] = Array.from({ length: 4 }, (_, i) => ({
+  id: `qf-${i + 1}`, date: '', time: '', city: '',
+  feedsFrom: [`r16-${i * 2 + 1}`, `r16-${i * 2 + 2}`],
+}));
 
-// FIFA 2026 official SF feedsFrom (QF IDs)
-const SF_M: Slot[] = [
-  { id: 'sf-1', date: '', time: '', city: '', feedsFrom: ['qf-1', 'qf-2'] },
-  { id: 'sf-2', date: '', time: '', city: '', feedsFrom: ['qf-3', 'qf-4'] },
-];
+// SF: QF-1+QF-2 → SF-1, QF-3+QF-4 → SF-2
+const SF_M: Slot[] = Array.from({ length: 2 }, (_, i) => ({
+  id: `sf-${i + 1}`, date: '', time: '', city: '',
+  feedsFrom: [`qf-${i * 2 + 1}`, `qf-${i * 2 + 2}`],
+}));
 
+// Final: SF-1 + SF-2
 const FINAL_M: Slot[] = [
   { id: 'final', date: '', time: '', city: '', feedsFrom: ['sf-1', 'sf-2'] },
 ];
 
-interface SeedData {
-  id: string; date: string; city: string;
-  teams: Array<{ id: string; name: string; flag: string; winner: boolean }>;
-  winner: Team | null; canClick: boolean; isFinal: boolean;
-}
-
-// ── Module-level bracket helpers (shared by desktop + mobile) ──
-
 const top32 = [...teams].sort((a, b) => b.elo - a.elo).slice(0, 32);
-
-// Match labels for mobile panels
-const R32_LABELS = Array.from({ length: 16 }, (_, i) => `M${i + 1}`);
-const R16_LABELS = Array.from({ length: 8 }, (_, i) => `R16-${'①②③④⑤⑥⑦⑧'[i]}`);
-const QF_LABELS = Array.from({ length: 4 }, (_, i) => `¼决赛-${'①②③④'[i]}`);
-const SF_LABELS = ['半决赛-①', '半决赛-②'];
-const FINAL_LABEL = ['🏆 决赛'];
-
-type SectionId = 'upper' | 'lower' | 'qf' | 'sf' | 'final';
-
-interface SectionDef {
-  id: SectionId;
-  title: string;
-  matchCount: number;
-  slots: Slot[];
-  labels: string[];
-}
-
-const SECTION_DEFS: SectionDef[] = [
-  {
-    // QF-1 + QF-2 → SF-1 (Upper bracket)
-    id: 'upper', title: '上半区', matchCount: 12,
-    slots: [R32[3], R32[5], R32[12], R32[9], R32[15], R32[10], R32[2], R32[4], R16_M[0], R16_M[1], R16_M[2], R16_M[3]],
-    labels: [R32_LABELS[3], R32_LABELS[5], R32_LABELS[12], R32_LABELS[9], R32_LABELS[15], R32_LABELS[10], R32_LABELS[2], R32_LABELS[4], R16_LABELS[0], R16_LABELS[1], R16_LABELS[2], R16_LABELS[3]],
-  },
-  {
-    // QF-3 + QF-4 → SF-2 (Lower bracket)
-    id: 'lower', title: '下半区', matchCount: 12,
-    slots: [R32[8], R32[14], R32[0], R32[7], R32[11], R32[13], R32[1], R32[6], R16_M[4], R16_M[5], R16_M[6], R16_M[7]],
-    labels: [R32_LABELS[8], R32_LABELS[14], R32_LABELS[0], R32_LABELS[7], R32_LABELS[11], R32_LABELS[13], R32_LABELS[1], R32_LABELS[6], R16_LABELS[4], R16_LABELS[5], R16_LABELS[6], R16_LABELS[7]],
-  },
-  {
-    id: 'qf', title: '八强', matchCount: 4,
-    slots: QF_M, labels: QF_LABELS,
-  },
-  {
-    id: 'sf', title: '四强', matchCount: 2,
-    slots: SF_M, labels: SF_LABELS,
-  },
-  {
-    id: 'final', title: '决赛', matchCount: 1,
-    slots: FINAL_M, labels: FINAL_LABEL,
-  },
-];
-
-/** Determine which section(s) should be expanded by default based on pick progress */
-function computeCurrentStage(picks: Picks): Set<SectionId> {
-  const hasAny = Object.keys(picks).length > 0;
-  if (!hasAny) return new Set<SectionId>(['upper', 'lower']);
-
-  for (const section of SECTION_DEFS) {
-    for (const slot of section.slots) {
-      if (picks[slot.id]) continue;
-      // Check if both teams are known (match is "pickable")
-      let t1: Team | null = null;
-      let t2: Team | null = null;
-      if (slot.feedsFrom.length === 2) {
-        t1 = teamMap.get(picks[slot.feedsFrom[0]]) ?? null;
-        t2 = teamMap.get(picks[slot.feedsFrom[1]]) ?? null;
-      } else {
-        const idx = R32.indexOf(slot);
-        t1 = top32[idx * 2] ?? null;
-        t2 = top32[idx * 2 + 1] ?? null;
-      }
-      if (t1 && t2) return new Set<SectionId>([section.id]);
-    }
-  }
-  return new Set<SectionId>(['final']);
-}
-
-// ── Mobile-only components ──
-
-/** Single match card for mobile accordion panels */
-function MobileMatchCard({
-  seed, label, onPick,
-}: {
-  seed: SeedData; label: string; onPick: (teamId: string) => void;
-}) {
-  const t1 = seed.teams[0];
-  const t2 = seed.teams[1];
-
-  function teamBtn(team: typeof t1, onSelect: (() => void) | null) {
-    return (
-      <button
-        onClick={onSelect || undefined}
-        disabled={!onSelect}
-        className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl transition-all ${
-          team.winner
-            ? 'bg-gold-50 border-2 border-gold shadow-sm'
-            : onSelect
-              ? 'bg-gray-50 border border-gray-200 active:bg-gray-100 active:scale-[0.98]'
-              : 'bg-gray-50/50 border border-gray-100 opacity-50 cursor-default'
-        }`}
-      >
-        <span className="text-2xl mb-1">
-          {team.flag !== '?' ? team.flag : '❓'}
-        </span>
-        <span className={`text-xs font-semibold text-center leading-tight truncate max-w-full ${
-          team.winner ? 'text-gold-dark' : team.name === '待定' ? 'text-gray-400' : 'text-gray-800'
-        }`}>
-          {team.name}
-        </span>
-        {team.winner && <span className="text-gold text-sm mt-0.5 font-bold">✓</span>}
-      </button>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-3 mb-3 shadow-sm">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-          {label}
-        </span>
-        {seed.winner && (
-          <span className="text-xs font-bold text-gold-dark">
-            ✓ {seed.winner.flag} {seed.winner.name}
-          </span>
-        )}
-      </div>
-      <div className="flex items-stretch gap-2">
-        {teamBtn(t1, seed.canClick && t1.id ? () => onPick(t1.id) : null)}
-        <div className="flex items-center shrink-0">
-          <span className="text-xs font-bold text-gray-300">VS</span>
-        </div>
-        {teamBtn(t2, seed.canClick && t2.id ? () => onPick(t2.id) : null)}
-      </div>
-    </div>
-  );
-}
-
-/** Collapsible accordion panel for one bracket section */
-function AccordionSection({
-  title, matchCount, completed, seeds, labels, expanded, onToggle, onPick,
-}: {
-  title: string; matchCount: number; completed: number;
-  seeds: SeedData[]; labels: string[];
-  expanded: boolean; onToggle: () => void;
-  onPick: (slotId: string, teamId: string) => void;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-3 shadow-sm">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors active:bg-gray-100"
-        aria-expanded={expanded}
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="font-bold text-gray-900 text-sm">{title}</span>
-          <span className="text-[11px] text-gray-400">({matchCount}场)</span>
-          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
-            completed === matchCount ? 'bg-green-100 text-green-700' :
-            completed > 0 ? 'bg-navy/10 text-navy' : 'bg-gray-100 text-gray-400'
-          }`}>
-            {completed}/{matchCount}
-          </span>
-        </div>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {expanded && (
-        <div className="px-3 pb-3 pt-0 max-h-[65vh] overflow-y-auto scrollbar-hide">
-          {seeds.map((seed, i) => (
-            <MobileMatchCard key={seed.id} seed={seed} label={labels[i]}
-              onPick={(teamId) => onPick(seed.id, teamId)} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** Fixed bottom progress bar */
 function FloatingProgressBar({ filled, total }: { filled: number; total: number }) {
@@ -979,58 +791,8 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
 
   function reset() { setPicks({}); setStarted(false); }
 
-  // ── Mobile accordion state ──
-  const [mobileSection, setMobileSection] = useState<SectionId | null>(null);
-
   // ── Share state ──
   const [shareCopied, setShareCopied] = useState(false);
-
-  const expandedSet = useMemo(() => {
-    if (mobileSection !== null) return new Set<SectionId>([mobileSection]);
-    return computeCurrentStage(picks);
-  }, [mobileSection, picks]);
-
-  function buildSeed(slot: Slot, isFinal: boolean, roundSlots: Slot[]): SeedData {
-    const w = winnerOf(slot.id);
-    let t1: Team | null = null, t2: Team | null = null;
-    if (slot.feedsFrom.length === 2) {
-      t1 = winnerOf(slot.feedsFrom[0]);
-      t2 = winnerOf(slot.feedsFrom[1]);
-    } else {
-      const idx = roundSlots.indexOf(slot);
-      t1 = top32[idx * 2] || null;
-      t2 = top32[idx * 2 + 1] || null;
-    }
-    return {
-      id: slot.id, date: '', city: '',
-      teams: [
-        {
-          id: t1?.id || '',
-          name: t1?.name || '待定',
-          flag: t1?.flag || '?',
-          winner: !!w && w.id === t1?.id,
-        },
-        {
-          id: t2?.id || '',
-          name: t2?.name || '待定',
-          flag: t2?.flag || '?',
-          winner: !!w && w.id === t2?.id,
-        },
-      ],
-      winner: w,
-      canClick: !w && !!t1 && !!t2,
-      isFinal,
-    };
-  }
-
-  const roundData = useMemo(() => [
-    { title: '32 强', seeds: R32.map(s => buildSeed(s, false, R32)) },
-    { title: '16 强', seeds: R16_M.map(s => buildSeed(s, false, R16_M)) },
-    { title: '¼ 决赛', seeds: QF_M.map(s => buildSeed(s, false, QF_M)) },
-    { title: '半决赛', seeds: SF_M.map(s => buildSeed(s, false, SF_M)) },
-    { title: '决赛', seeds: FINAL_M.map(s => buildSeed(s, true, FINAL_M)) },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [picks]);
 
   // ── Build MatchNodeData for BracketTree ──
   function buildMatchNode(slot: Slot, roundSlots: Slot[]): MatchNodeData {
@@ -1061,16 +823,6 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
     { title: '决赛', matches: FINAL_M.map(s => buildMatchNode(s, FINAL_M)) },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [picks]);
-
-  // ── Mobile sections: seed data for accordion panels ──
-  const mobileSections = SECTION_DEFS.map(section => {
-    const seeds = section.slots.map(slot => {
-      const isR32Round = slot.feedsFrom.length === 0;
-      return buildSeed(slot, slot.id === 'final', isR32Round ? R32 : section.slots);
-    });
-    const completed = seeds.filter(s => s.winner !== null).length;
-    return { ...section, seeds, completed };
-  });
 
   const filled = [...R32, ...R16_M, ...QF_M, ...SF_M, ...FINAL_M].filter(
     s => picks[s.id]
