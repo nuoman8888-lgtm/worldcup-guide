@@ -1054,10 +1054,10 @@ function ManualBracketView({ onBack }: { onBack: () => void }) {
   }
 
   const bracketRounds: RoundData[] = useMemo(() => [
-    { title: '32 强', matches: R32.map(s => buildMatchNode(s, R32)) },
-    { title: '16 强', matches: R16_M.map(s => buildMatchNode(s, R16_M)) },
-    { title: '¼ 决赛', matches: QF_M.map(s => buildMatchNode(s, QF_M)) },
-    { title: '半决赛', matches: SF_M.map(s => buildMatchNode(s, SF_M)) },
+    { title: '32强', matches: R32.map(s => buildMatchNode(s, R32)) },
+    { title: '16强', matches: R16_M.map(s => buildMatchNode(s, R16_M)) },
+    { title: '8强', matches: QF_M.map(s => buildMatchNode(s, QF_M)) },
+    { title: '4强', matches: SF_M.map(s => buildMatchNode(s, SF_M)) },
     { title: '决赛', matches: FINAL_M.map(s => buildMatchNode(s, FINAL_M)) },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [picks]);
