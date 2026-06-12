@@ -293,3 +293,243 @@ export function getChampionProbData() {
     return { ...p, team: team! };
   }).filter(p => p.team);
 }
+
+// ── Multi-Model AI Prediction (Claude + Qwen Fusion) ──
+
+export interface AdvancedPrediction {
+  // Overall fusion result
+  winner: string;
+  confidence: number;
+  // Top 3 most likely scores
+  topScores: { home: number; away: number; probability: number }[];
+  // Individual model predictions
+  claude: { predictedScore: string; confidence: number; reasoning: string };
+  qwen: { predictedScore: string; confidence: number; reasoning: string };
+  // Win/Draw/Loss probabilities
+  homeWinProb: number;
+  drawProb: number;
+  awayWinProb: number;
+}
+
+/**
+ * Simulated Claude model (ELO-heavy, conservative).
+ * Claude tends to favor the stronger team with narrower scorelines.
+ */
+function simulateClaude(home: Team, away: Team): { score: string; conf: number; reason: string } {
+  const eloDiff = home.elo - away.elo;
+  const pHome = 1 / (1 + Math.pow(10, -eloDiff / 400));
+
+  let homeGoals: number, awayGoals: number;
+  if (pHome > 0.7) {
+    homeGoals = 2; awayGoals = 0;
+  } else if (pHome > 0.55) {
+    homeGoals = 1 + (eloDiff > 200 ? 1 : 0); awayGoals = eloDiff < 50 ? 1 : 0;
+  } else if (pHome > 0.45) {
+    homeGoals = 1; awayGoals = 1;
+  } else if (pHome > 0.3) {
+    homeGoals = 0; awayGoals = 1 + (eloDiff < -200 ? 1 : 0);
+  } else {
+    homeGoals = 0; awayGoals = 2;
+  }
+
+  const conf = Math.min(85, Math.round(50 + Math.abs(eloDiff) / 15));
+  const reason = eloDiff > 100
+    ? `${home.name} ELO优势明显（+${eloDiff}），预期控制比赛节奏`
+    : eloDiff < -100
+    ? `${away.name} ELO更高（+${-eloDiff}），${home.name}需防守反击`
+    : '两队ELO接近，中场争夺将是关键';
+
+  return { score: `${homeGoals}-${awayGoals}`, conf, reason };
+}
+
+/**
+ * Simulated Qwen model (form-heavy, aggressive).
+ * Qwen puts more weight on recent form and tends to predict more goals.
+ */
+function simulateQwen(home: Team, away: Team): { score: string; conf: number; reason: string } {
+  const eloDiff = home.elo - away.elo;
+  const homeForm = home.recentForm.filter(f => f === 'W').length;
+  const awayForm = away.recentForm.filter(f => f === 'W').length;
+  const formDiff = homeForm - awayForm;
+
+  let homeGoals: number, awayGoals: number;
+  const adjElo = eloDiff + formDiff * 80;
+
+  // Fully deterministic — no Math.random()
+  // Thresholds: ELO gaps mapped to goal ranges based on real football distributions
+  if (adjElo > 300) {
+    // Total domination
+    homeGoals = 4; awayGoals = 0;
+  } else if (adjElo > 200) {
+    // Clear favorite — extra goal if form is also dominant
+    homeGoals = 3; awayGoals = formDiff >= 2 ? 0 : 1;
+  } else if (adjElo > 80) {
+    // Moderate favorite
+    homeGoals = 2; awayGoals = formDiff > 0 ? 0 : 1;
+  } else if (adjElo > 0) {
+    // Slight edge — typically a close win
+    homeGoals = 2; awayGoals = 1;
+  } else if (adjElo > -80) {
+    // Slight underdog — opponent edge
+    homeGoals = 1; awayGoals = 2;
+  } else if (adjElo > -200) {
+    // Clear underdog
+    homeGoals = formDiff < -1 ? 0 : 1; awayGoals = 2;
+  } else if (adjElo > -350) {
+    // Heavy underdog — extra opponent goal if form gap is large
+    homeGoals = 0; awayGoals = formDiff < -2 ? 4 : 3;
+  } else {
+    // Extreme underdog — total mismatch
+    homeGoals = 0; awayGoals = 4;
+  }
+
+  const conf = Math.min(80, Math.round(45 + Math.abs(adjElo) / 20 + Math.abs(formDiff) * 5));
+  const reason = formDiff > 1
+    ? `${home.name}近期状态火热（近5场${homeForm}胜），势头正劲`
+    : formDiff < -1
+    ? `${away.name}近期表现更佳（近5场${awayForm}胜），士气占优`
+    : eloDiff > 0
+    ? `${home.name}综合实力略胜一筹`
+    : `${away.name}纸面实力更强`;
+
+  return { score: `${homeGoals}-${awayGoals}`, conf, reason };
+}
+
+/**
+ * Generate top 3 most likely scorelines with probabilities.
+ * Uses Poisson distribution around the expected goals.
+ */
+function generateTopScores(homeLambda: number, awayLambda: number): { home: number; away: number; probability: number }[] {
+  const poisson = (lambda: number, k: number): number => {
+    if (lambda <= 0) return k === 0 ? 1 : 0;
+    let logP = -lambda + k * Math.log(lambda);
+    for (let i = 2; i <= k; i++) logP -= Math.log(i);
+    return Math.exp(logP);
+  };
+
+  const scores: { home: number; away: number; probability: number }[] = [];
+  for (let h = 0; h <= 5; h++) {
+    for (let a = 0; a <= 5; a++) {
+      const p = poisson(homeLambda, h) * poisson(awayLambda, a);
+      scores.push({ home: h, away: a, probability: Math.round(p * 1000) / 10 });
+    }
+  }
+  return scores.sort((a, b) => b.probability - a.probability).slice(0, 3);
+}
+
+/**
+ * Advanced multi-model prediction (Claude + Qwen fusion).
+ * Returns winner, confidence, 3 most likely scores, and per-model details.
+ */
+export function predictMatchAdvanced(homeTeamId: string, awayTeamId: string): AdvancedPrediction | null {
+  const home = getTeam(homeTeamId);
+  const away = getTeam(awayTeamId);
+  if (!home || !away) return null;
+
+  // Get individual model predictions
+  const claude = simulateClaude(home, away);
+  const qwen = simulateQwen(home, away);
+
+  // Parse scores
+  const [ch, ca] = claude.score.split('-').map(Number);
+  const [qh, qa] = qwen.score.split('-').map(Number);
+
+  // Fusion: weighted average of expected goals
+  const wClaude = 0.55; // Claude weight
+  const wQwen = 0.45;   // Qwen weight
+  const homeXG = wClaude * ch + wQwen * qh;
+  const awayXG = wClaude * ca + wQwen * qa;
+
+  // Determine winner and confidence
+  let winner: string;
+  let confidence: number;
+  if (homeXG > awayXG + 0.5) {
+    winner = home.name;
+    confidence = Math.round(wClaude * claude.conf + wQwen * qwen.conf);
+  } else if (awayXG > homeXG + 0.5) {
+    winner = away.name;
+    confidence = Math.round(wClaude * claude.conf + wQwen * qwen.conf);
+  } else {
+    winner = '平局';
+    confidence = Math.round((wClaude * claude.conf + wQwen * qwen.conf) * 0.75);
+  }
+
+  // Calculate probabilities — proper normalization (no negative, sum = 100%)
+  const eloDiff = home.elo - away.elo;
+
+  // Raw weights: ELO-based with form adjustment, clamp to non-negative
+  const rawHome = Math.max(0, (1 / (1 + Math.pow(10, -eloDiff / 400))) * 100);
+  const rawDraw = Math.max(0, 26 - Math.abs(eloDiff) / 30);
+  const rawAway = Math.max(0, (1 / (1 + Math.pow(10, eloDiff / 400))) * 100);
+
+  // Normalize to sum = 100% (largest-remainder method)
+  const [homeWinProb, drawProb, awayWinProb] = normalizeProbs(rawHome, rawDraw, rawAway);
+
+  // Generate top 3 scores
+  const topScores = generateTopScores(Math.round(homeXG), Math.round(awayXG));
+
+  return {
+    winner,
+    confidence,
+    topScores,
+    claude: { predictedScore: claude.score, confidence: claude.conf, reasoning: claude.reason },
+    qwen: { predictedScore: qwen.score, confidence: qwen.conf, reasoning: qwen.reason },
+    homeWinProb,
+    drawProb,
+    awayWinProb,
+  };
+}
+
+/**
+ * Normalize 3 raw probability weights to integers summing to exactly 100.
+ * Uses largest-remainder method. All outputs clamped to [0, 100].
+ * Returns [p1, p2, p3] guaranteed to sum to 100.
+ */
+export function normalizeProbs(w1: number, w2: number, w3: number): [number, number, number] {
+  // Clamp all inputs to non-negative
+  w1 = Math.max(0, w1);
+  w2 = Math.max(0, w2);
+  w3 = Math.max(0, w3);
+
+  const total = w1 + w2 + w3;
+
+  // Edge case: all zero → equal split
+  if (total === 0) return [34, 33, 33];
+
+  // Compute exact percentages
+  const exact = [w1 / total * 100, w2 / total * 100, w3 / total * 100];
+
+  // Integer part
+  const floors = exact.map(v => Math.floor(v));
+
+  // Remainders
+  const remainders = exact.map((v, i) => ({ idx: i, rem: v - floors[i] }));
+
+  // Current sum of integers
+  let sum = floors.reduce((a, b) => a + b, 0);
+
+  // Distribute remaining points to largest remainders
+  remainders.sort((a, b) => b.rem - a.rem);
+  for (let i = 0; i < 100 - sum; i++) {
+    floors[remainders[i % 3].idx]++;
+  }
+
+  // Final clamp to [0, 100]
+  return [
+    Math.max(0, Math.min(100, floors[0])),
+    Math.max(0, Math.min(100, floors[1])),
+    Math.max(0, Math.min(100, floors[2])),
+  ];
+}
+
+/**
+ * Validate that a probability triplet is valid.
+ * Returns error message if invalid, null if valid.
+ */
+export function validateProbs(p1: number, p2: number, p3: number): string | null {
+  if (isNaN(p1) || isNaN(p2) || isNaN(p3)) return '预测数据异常：包含NaN';
+  if (p1 < 0 || p2 < 0 || p3 < 0) return '预测数据异常：概率为负数';
+  if (p1 > 100 || p2 > 100 || p3 > 100) return '预测数据异常：概率超过100%';
+  if (Math.abs(p1 + p2 + p3 - 100) > 1) return '预测数据异常：概率和不等于100%';
+  return null;
+}

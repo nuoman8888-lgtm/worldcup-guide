@@ -1,6 +1,7 @@
 // 2026 World Cup Match Schedule (corrected per FIFA official schedule)
 // All times Beijing (UTC+8). Tournament: June 12 – July 20, 2026
 import { groups } from './teams';
+import { getBeijingToday } from '@/lib/utils';
 
 export type MatchStatus = 'upcoming' | 'live' | 'finished';
 export type MatchStage = 'group' | 'round32' | 'round16' | 'quarterfinal' | 'semifinal' | 'thirdPlace' | 'final';
@@ -215,8 +216,20 @@ export function getMatchesByDate(date: string): Match[] { return allMatches.filt
 export function getMatchesByTeam(teamId: string): Match[] { return allMatches.filter(m => m.homeTeamId === teamId || m.awayTeamId === teamId); }
 export function getMatchesByGroup(group: string): Match[] { return allMatches.filter(m => m.group === group); }
 export function getMatch(id: string): Match | undefined { return allMatches.find(m => m.id === id); }
-export function getTodayMatches(): Match[] { const today = new Date().toISOString().split('T')[0]; return getMatchesByDate(today); }
-export function getUpcomingMatches(): Match[] { const today = new Date().toISOString().split('T')[0]; return allMatches.filter(m => m.date >= today && m.status !== 'finished'); }
+export function getTodayMatches(): Match[] { const today = getBeijingToday(); return getMatchesByDate(today); }
+export function getUpcomingMatches(): Match[] { const today = getBeijingToday(); return allMatches.filter(m => m.date >= today && m.status !== 'finished'); }
+
+/** Get only genuinely upcoming/live matches (excludes finished, only today and future) */
+export function getActiveUpcomingMatches(): Match[] {
+  const today = getBeijingToday();
+  return allMatches.filter(m => m.date >= today && (m.status === 'upcoming' || m.status === 'live'));
+}
+
+/** Get today's focus matches (finished + live + upcoming) */
+export function getTodayFocusMatches(): Match[] {
+  const today = getBeijingToday();
+  return allMatches.filter(m => m.date === today);
+}
 export function getUniqueDates(): string[] { const dates = new Set(allMatches.map(m => m.date)); return Array.from(dates).sort(); }
 export function getKnockoutMatches(): Match[] { return allMatches.filter(m => m.stage !== 'group'); }
 
@@ -228,4 +241,33 @@ export function formatDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   const days = ['周日','周一','周二','周三','周四','周五','周六'];
   return `${date.getMonth()+1}月${date.getDate()}日 ${days[date.getDay()]}`;
+}
+
+/**
+ * Simulate finished matches for demo/testing.
+ * Marks matches before today as finished with realistic scores.
+ * Uses deterministic seeding based on match ID to ensure consistent results.
+ */
+export function applySimulatedResults(): void {
+  const today = getBeijingToday();
+
+  // Simple deterministic scorer based on team ELO
+  const seedFromId = (id: string): number => {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = ((h << 5) - h) + id.charCodeAt(i);
+    return Math.abs(h);
+  };
+
+  allMatches.forEach(m => {
+    // Mark past group-stage matches as finished with scores
+    if (m.date < today && m.stage === 'group' && m.status === 'upcoming') {
+      m.status = 'finished';
+      // Generate realistic scores based on match ID (deterministic)
+      const seed = seedFromId(m.id);
+      const homeBase = 1 + (seed % 3);     // 1-3 goals
+      const awayBase = ((seed >> 4) % 3);  // 0-2 goals
+      m.homeScore = homeBase;
+      m.awayScore = awayBase;
+    }
+  });
 }

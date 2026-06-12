@@ -55,10 +55,14 @@ export default function RootLayout({
           </div>
         </footer>
 
-        {/* Cloudflare Web Analytics */}
+        {/* Cloudflare Web Analytics — 全量统计 (PV/UV/热门页面/来源/国家/设备)
+             获取 token: Cloudflare Dash → 域名 → Analytics → Web Analytics → 启用
+             替换下方 token 后，所有访问数据自动出现在 CF 后台 */}
         <Script
           src="https://static.cloudflareinsights.com/beacon.min.js"
-          data-cf-beacon='{"token": "YOUR_CF_TOKEN_HERE"}'
+          data-cf-beacon={JSON.stringify({
+            token: process.env.NEXT_PUBLIC_CF_BEACON_TOKEN || '__CF_TOKEN__',
+          })}
           strategy="afterInteractive"
         />
 

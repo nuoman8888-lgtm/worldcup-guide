@@ -19,6 +19,20 @@ export function getTodayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+/**
+ * Get today's date in Beijing timezone (Asia/Shanghai, UTC+8).
+ * All match dates are Beijing time — this MUST be used for date comparisons.
+ */
+export function getBeijingToday(): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(new Date());
+}
+
 export function getCurrentBeijingTime(): string {
   const now = new Date();
   // Beijing time is UTC+8

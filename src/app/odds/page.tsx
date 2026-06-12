@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getChampionOdds } from '@/data/odds';
 import { getTeam } from '@/data/teams';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
+import PageTracker from '@/components/PageTracker';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function OddsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      <PageTracker event="odds_view" />
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">💰 赔率分析</h1>
         <p className="text-gray-500 text-sm">
@@ -80,6 +82,104 @@ export default function OddsPage() {
         </div>
       </div>
 
+      {/* Model Predictions vs Market */}
+      <div className="mt-8">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">🤖 模型预测 vs 市场赔率</h2>
+        <div className="grid md:grid-cols-3 gap-4">
+          {/* Goldman Sachs */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <h3 className="font-bold text-gray-900 mb-1">高盛量化模型</h3>
+            <p className="text-xs text-gray-400 mb-3">5万次蒙特卡洛模拟 · Elo+历史数据</p>
+            <div className="space-y-1.5 text-sm">
+              {[
+                { team: '西班牙', prob: 26 },
+                { team: '法国', prob: 19 },
+                { team: '阿根廷', prob: 14 },
+                { team: '巴西', prob: 8 },
+                { team: '英格兰', prob: 5 },
+              ].map((t) => (
+                <div key={t.team} className="flex items-center gap-2">
+                  <span className="font-medium text-gray-700 w-16 text-xs">{t.team}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-navy to-blue-500"
+                      style={{ width: `${Math.round((t.prob / 26) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-navy w-10 text-right tabular-nums">{t.prob}%</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 leading-relaxed">显著高配西班牙，低配英格兰/葡萄牙</p>
+          </div>
+
+          {/* Opta */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <h3 className="font-bold text-gray-900 mb-1">Opta 超级计算机</h3>
+            <p className="text-xs text-gray-400 mb-3">AI预测 · xG+阵容深度+近期状态</p>
+            <div className="space-y-1.5 text-sm">
+              {[
+                { team: '西班牙', prob: 16.1 },
+                { team: '法国', prob: 13 },
+                { team: '阿根廷', prob: 11 },
+                { team: '巴西', prob: 10 },
+                { team: '德国', prob: 8 },
+              ].map((t) => (
+                <div key={t.team} className="flex items-center gap-2">
+                  <span className="font-medium text-gray-700 w-16 text-xs">{t.team}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-gold to-yellow-400"
+                      style={{ width: `${Math.round((t.prob / 16.1) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-gold-dark w-10 text-right tabular-nums">{t.prob}%</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 leading-relaxed">强调近期状态，西班牙欧洲杯冠军加持</p>
+          </div>
+
+          {/* Market Consensus */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <h3 className="font-bold text-gray-900 mb-1">博彩市场共识</h3>
+            <p className="text-xs text-gray-400 mb-3">Bet365/威廉希尔/Pinnacle · 6月初</p>
+            <div className="space-y-1.5 text-sm">
+              {[
+                { team: '西班牙', prob: 18 },
+                { team: '法国', prob: 18 },
+                { team: '英格兰', prob: 15 },
+                { team: '葡萄牙', prob: 14 },
+                { team: '阿根廷', prob: 12 },
+              ].map((t) => (
+                <div key={t.team} className="flex items-center gap-2">
+                  <span className="font-medium text-gray-700 w-16 text-xs">{t.team}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-500"
+                      style={{ width: `${Math.round((t.prob / 18) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-red-500 w-10 text-right tabular-nums">{t.prob}%</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 leading-relaxed">西法并列第一，市场未明确分出热门</p>
+          </div>
+        </div>
+
+        {/* Key Insights */}
+        <div className="mt-4 bg-navy/5 border border-navy/10 rounded-xl p-4 text-sm text-gray-600">
+          <p className="font-semibold text-gray-900 mb-2">📊 关键认知差</p>
+          <ul className="space-y-1.5 list-disc list-inside text-xs leading-relaxed">
+            <li>高盛模型<strong>显著高配西班牙（26%）</strong>，远高于市场隐含概率（~18%），与博彩赔率存在明显认知差</li>
+            <li>市场赔率<strong>西班牙与法国几乎无差别</strong>，反映资金流向与市场情绪的高度均衡</li>
+            <li>Opta等数据机构更关注<strong>xG（预期进球）与阵容深度</strong>，西班牙因2024欧洲杯冠军获得更高权重</li>
+            <li className="text-gray-400">⚠️ 赔率反映资金流向与市场情绪，不等于真实胜率；模型无法预判伤病、临场发挥或偶然事件（点球、红牌）</li>
+          </ul>
+        </div>
+      </div>
+
       {/* How Odds Work */}
       <div className="mt-8 grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
@@ -87,9 +187,9 @@ export default function OddsPage() {
           <div className="space-y-3 text-sm text-gray-600">
             <p><strong>小数赔率</strong>（欧洲赔率）：表示每投入1元可获得的回报</p>
             <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
-              <p>例如：巴西赔率 <span className="font-bold text-gray-900">5.50</span></p>
-              <p>→ 投注1元，获胜可得 <span className="font-bold text-gray-900">5.50</span> 元</p>
-              <p>→ 隐含概率 ≈ <span className="font-bold text-qualify">{Math.round(100/5.5)}%</span></p>
+              <p>例如：西班牙赔率 <span className="font-bold text-gray-900">5.00</span></p>
+              <p>→ 投注1元，获胜可得 <span className="font-bold text-gray-900">5.00</span> 元</p>
+              <p>→ 隐含概率 ≈ <span className="font-bold text-qualify">{Math.round(100/5)}%</span></p>
             </div>
             <p>赔率越低 = 市场认为夺冠概率越高</p>
           </div>

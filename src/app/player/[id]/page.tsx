@@ -5,6 +5,7 @@ import { getPlayer, getPlayersByTeam, getPlayerRadarData, topPlayers } from '@/d
 import { getTeam } from '@/data/teams';
 import RadarChart from '@/components/RadarChart';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import PageTracker from '@/components/PageTracker';
 
 // ── Position colors ──
 const posColors: Record<string, string> = {
@@ -56,6 +57,7 @@ export default async function PlayerPage({
 
   return (
     <div className="min-h-screen">
+      <PageTracker event="player_view" data={{ player: player.id, team: player.teamId }} />
       {/* ═══════ Hero ═══════ */}
       <section className={`bg-gradient-to-br ${gradient} text-white`}>
         <div className="max-w-4xl mx-auto px-4 py-10 md:py-14">

@@ -265,11 +265,15 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                     const h = getTeam(m.homeTeamId);
                     const a = getTeam(m.awayTeamId);
                     const isHome = m.homeTeamId === team.id;
+                    const isFinished = m.status === 'finished';
+                    const isLive = m.status === 'live';
                     return (
                       <Link
                         key={m.id}
                         href={`/match/${m.id}`}
-                        className="flex items-center gap-3 bg-white rounded-lg border border-gray-100 p-3 hover:shadow-md hover:border-navy-600 transition-all group card-elevated"
+                        className={`flex items-center gap-3 rounded-lg border p-3 transition-all group card-elevated ${
+                          isFinished ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-navy-600'
+                        }`}
                       >
                         <div className="text-center shrink-0 w-14">
                           <div className="text-xs text-gray-400 font-mono">{m.date.slice(5)}</div>
@@ -280,13 +284,29 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                           <span className={`text-xs font-medium truncate ${isHome ? 'text-gold-dark font-bold' : 'text-gray-700'}`}>
                             {h?.name || 'TBD'}
                           </span>
-                          <span className="text-gray-300 text-[10px] shrink-0">VS</span>
+                          {isFinished && m.homeScore !== undefined ? (
+                            <span className="text-gray-900 font-bold text-xs shrink-0 tabular-nums">
+                              {m.homeScore} - {m.awayScore}
+                            </span>
+                          ) : isLive ? (
+                            <span className="text-red-600 font-bold text-xs shrink-0 animate-pulse tabular-nums">
+                              {m.homeScore ?? 0} - {m.awayScore ?? 0}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300 text-[10px] shrink-0">VS</span>
+                          )}
                           <span className={`text-xs font-medium truncate ${!isHome ? 'text-gold-dark font-bold' : 'text-gray-700'}`}>
                             {a?.name || 'TBD'}
                           </span>
                           <span className="text-lg shrink-0">{a?.flag}</span>
                         </div>
-                        <div className="text-[10px] text-gray-400 shrink-0 hidden sm:block">{m.city}</div>
+                        {isFinished ? (
+                          <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded shrink-0">完赛</span>
+                        ) : isLive ? (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse shrink-0">LIVE</span>
+                        ) : (
+                          <div className="text-[10px] text-gray-400 shrink-0 hidden sm:block">{m.city}</div>
+                        )}
                         <span className="text-gray-300 group-hover:text-gold transition-colors shrink-0">→</span>
                       </Link>
                     );

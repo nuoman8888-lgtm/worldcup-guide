@@ -1,20 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { allMatches } from '@/data/matches';
+import { allMatches as staticMatches } from '@/data/matches';
 import { getTeam, getCountryCode } from '@/data/teams';
+import { getBeijingToday } from '@/lib/utils';
 
-function getBeijingToday(): string {
-  const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
-  return f.format(new Date());
+interface ApiMatch {
+  id: number; utcDate: string; status: string;
+  homeTeam: { tla: string; shortName: string };
+  awayTeam: { tla: string; shortName: string };
 }
 
+function bjDate(utc: string): string { const d = new Date(utc); if (isNaN(d.getTime())) return ''; const b = new Date(d.getTime() + 8*3600000); return `${String(b.getUTCFullYear())}-${String(b.getUTCMonth()+1).padStart(2,'0')}-${String(b.getUTCDate()).padStart(2,'0')}`; }
+function bjTime(utc: string): string { const d = new Date(utc); if (isNaN(d.getTime())) return ''; const b = new Date(d.getTime() + 8*3600000); return `${String(b.getUTCHours()).padStart(2,'0')}:${String(b.getUTCMinutes()).padStart(2,'0')}`; }
+
 /**
- * Countdown bar: shows countdown to NEXT upcoming match.
- * Before tournament: countdown to opening match.
- * During tournament: countdown to next match.
+ * Countdown bar: countdown to next upcoming match.
+ * Accepts API matches for live status detection.
  */
-export function CountdownBar() {
+export function CountdownBar({ apiMatches }: { apiMatches?: ApiMatch[] | null }) {
   const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0 });
   const [nextMatchLabel, setNextMatchLabel] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -26,8 +30,19 @@ export function CountdownBar() {
       const now = new Date();
       const today = getBeijingToday();
 
-      // Find next upcoming match
-      const upcoming = allMatches
+      // Use API data for live status, static data for schedule
+      const liveApiMatch = apiMatches?.find(m => m.status === 'IN_PLAY' || m.status === 'LIVE');
+      if (liveApiMatch) {
+        setIsLive(true);
+        const ht = liveApiMatch.homeTeam.shortName;
+        const at = liveApiMatch.awayTeam.shortName;
+        setNextMatchLabel(`${ht} vs ${at} 进行中`);
+        setTimeLeft({ h: 0, m: 0, s: 0 });
+        return;
+      }
+
+      // Find next upcoming match from static schedule
+      const upcoming = staticMatches
         .filter(m => m.date >= today && m.status !== 'finished')
         .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 

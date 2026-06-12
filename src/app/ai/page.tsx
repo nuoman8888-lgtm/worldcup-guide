@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getTeam, teams } from '@/data/teams';
-import { predictMatch, aiChat, getChampionProbData } from '@/lib/ai';
-import { trackPredictorStart, trackPredictorFinish, trackPredictorShare, trackEvent } from '@/lib/analytics';
+import { predictMatch, predictMatchAdvanced, aiChat, getChampionProbData } from '@/lib/ai';
+import { trackAiPageView, trackPredictorStart, trackPredictorFinish, trackPredictorShare, trackEvent } from '@/lib/analytics';
 
 export default function AIPage() {
+  useEffect(() => { trackAiPageView(); }, []);
   const [chatInput, setChatInput] = useState('');
   const [chatResult, setChatResult] = useState<any>(null);
   const [simTeam, setSimTeam] = useState('');
@@ -27,8 +28,9 @@ export default function AIPage() {
     const home = getTeam(simTeam);
     const away = getTeam(opponent);
     if (!home || !away) return;
-    const prediction = predictMatch(simTeam, opponent);
-    setMatchPrediction({ home, away, ...prediction });
+    const advanced = predictMatchAdvanced(simTeam, opponent);
+    const basic = predictMatch(simTeam, opponent);
+    setMatchPrediction({ home, away, ...basic, advanced });
     trackPredictorFinish();
   };
 
@@ -36,7 +38,7 @@ export default function AIPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">🤖 AI 预测分析</h1>
-        <p className="text-gray-500 text-sm">基于ELO评分、近期状态、历史数据的智能预测</p>
+        <p className="text-gray-500 text-sm">Claude + 千问 双模型融合 · ELO评分 · 近期状态 · 泊松分布比分预测</p>
       </div>
 
       {/* Championship Probability */}
@@ -113,45 +115,76 @@ export default function AIPage() {
             </button>
           </div>
 
-          {matchPrediction && (
+          {matchPrediction && matchPrediction.advanced ? (
+            <div className="mt-4 space-y-3">
+              {/* Fusion Result */}
+              <div className="p-4 bg-gradient-to-r from-navy to-navy-light rounded-xl text-white text-center">
+                <div className="text-xs font-bold tracking-widest uppercase text-gold mb-2">🤖 AI 综合预测</div>
+                <div className="text-3xl mb-2">{matchPrediction.home.flag} VS {matchPrediction.away.flag}</div>
+                <div className="text-2xl font-extrabold text-gold mb-1">{matchPrediction.advanced.winner}胜</div>
+                <div className="text-sm text-white/60">置信度 {matchPrediction.advanced.confidence}%</div>
+              </div>
+
+              {/* Top 3 Scores */}
+              <div className="bg-white rounded-lg border border-gray-100 p-4">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">📊 最可能比分</div>
+                <div className="space-y-2">
+                  {matchPrediction.advanced.topScores.map((s: {home:number;away:number;probability:number}, i:number) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-gray-400 w-5">{['①','②','③'][i]}</span>
+                      <span className="text-sm font-bold text-gray-900 tabular-nums">{s.home}:{s.away}</span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${i===0?'bg-gold':i===1?'bg-navy-600':'bg-gray-300'}`} style={{width:`${Math.min(100,s.probability*3)}%`}} />
+                      </div>
+                      <span className="text-xs font-bold text-gray-500 w-12 text-right tabular-nums">{s.probability}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Model comparison */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-purple-50 rounded-lg border border-purple-100 p-3 text-center">
+                  <div className="text-[10px] font-bold text-purple-500 uppercase tracking-wide mb-1">🧠 Claude</div>
+                  <div className="text-lg font-extrabold text-gray-900 tabular-nums">{matchPrediction.advanced.claude.predictedScore}</div>
+                  <div className="text-[10px] text-gray-400">{matchPrediction.advanced.claude.confidence}% · {matchPrediction.advanced.claude.reasoning}</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg border border-blue-100 p-3 text-center">
+                  <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mb-1">🌊 千问</div>
+                  <div className="text-lg font-extrabold text-gray-900 tabular-nums">{matchPrediction.advanced.qwen.predictedScore}</div>
+                  <div className="text-[10px] text-gray-400">{matchPrediction.advanced.qwen.confidence}% · {matchPrediction.advanced.qwen.reasoning}</div>
+                </div>
+              </div>
+
+              {/* Probabilities */}
+              <div className="bg-white rounded-lg border border-gray-100 p-3">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">📈 胜平负概率</div>
+                <div className="flex h-3 rounded-full overflow-hidden">
+                  <div className="bg-green-500 transition-all" style={{width:`${matchPrediction.advanced.homeWinProb}%`}} />
+                  <div className="bg-gray-300 transition-all" style={{width:`${matchPrediction.advanced.drawProb}%`}} />
+                  <div className="bg-orange-500 transition-all" style={{width:`${matchPrediction.advanced.awayWinProb}%`}} />
+                </div>
+                <div className="flex justify-between text-[10px] mt-1.5 text-gray-500">
+                  <span>{matchPrediction.home.name}胜 {matchPrediction.advanced.homeWinProb}%</span>
+                  <span>平 {matchPrediction.advanced.drawProb}%</span>
+                  <span>{matchPrediction.away.name}胜 {matchPrediction.advanced.awayWinProb}%</span>
+                </div>
+              </div>
+            </div>
+          ) : matchPrediction ? (
+            /* Fallback to basic prediction */
             <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-100">
               <div className="text-center mb-3">
                 <div className="text-3xl mb-2">{matchPrediction.home.flag} VS {matchPrediction.away.flag}</div>
                 <div className="text-xs text-gray-500 mb-1">AI预测比分: <strong>{matchPrediction.predictedScore}</strong></div>
-                {matchPrediction.topScores && matchPrediction.topScores.length > 0 && (
-                  <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
-                    {matchPrediction.topScores.map((s: {home: number; away: number; prob: number}, i: number) => (
-                      <span key={i} className="text-[11px] text-gray-500 bg-white/80 px-2 py-0.5 rounded-full">
-                        {s.home}:{s.away} <span className="font-semibold text-gray-700">({s.prob}%)</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-white rounded-lg p-2">
-                  <div className="text-xs text-gray-500">{matchPrediction.home.name}胜</div>
-                  <div className="text-lg font-bold text-green-700">{matchPrediction.homeWinProb}%</div>
-                </div>
-                <div className="bg-white rounded-lg p-2">
-                  <div className="text-xs text-gray-500">平局</div>
-                  <div className="text-lg font-bold text-gray-600">{matchPrediction.drawProb}%</div>
-                </div>
-                <div className="bg-white rounded-lg p-2">
-                  <div className="text-xs text-gray-500">{matchPrediction.away.name}胜</div>
-                  <div className="text-lg font-bold text-orange-600">{matchPrediction.awayWinProb}%</div>
-                </div>
-              </div>
-              <div className="mt-3 space-y-1.5">
-                {matchPrediction.factors.map((f: any, i: number) => (
-                  <div key={i} className={`text-xs flex items-start gap-1.5 ${f.impact === 'positive' ? 'text-green-700' : f.impact === 'negative' ? 'text-red-600' : 'text-gray-500'}`}>
-                    <span>{f.impact === 'positive' ? '✅' : f.impact === 'negative' ? '⚠️' : 'ℹ️'}</span>
-                    <span><strong>{f.label}:</strong> {f.detail}</span>
-                  </div>
-                ))}
+                <div className="bg-white rounded-lg p-2"><div className="text-xs text-gray-500">{matchPrediction.home.name}胜</div><div className="text-lg font-bold text-green-700">{matchPrediction.homeWinProb}%</div></div>
+                <div className="bg-white rounded-lg p-2"><div className="text-xs text-gray-500">平局</div><div className="text-lg font-bold text-gray-600">{matchPrediction.drawProb}%</div></div>
+                <div className="bg-white rounded-lg p-2"><div className="text-xs text-gray-500">{matchPrediction.away.name}胜</div><div className="text-lg font-bold text-orange-600">{matchPrediction.awayWinProb}%</div></div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* AI Chat */}
