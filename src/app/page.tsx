@@ -24,6 +24,8 @@ export default function HomePage() {
   const [st, setSt] = useState<any[]>([]);
   const [ag, setAg] = useState('A');
   const [as, setAs] = useState<'loading'|'ok'|'err'>('loading');
+  const [countdown, setCountdown] = useState({ h: 0, m: 0, s: 0 });
+  const [prevScores, setPrevScores] = useState<Record<number, {home: number|null, away: number|null}>>({});
 
   useEffect(() => {
     Promise.all([
@@ -34,6 +36,39 @@ export default function HomePage() {
       if (sj?.standings) setSt(sj.standings);
       setAs('ok');
     }).catch(() => setAs('err'));
+  }, []);
+
+  // ── Track score changes for highlight animation ──
+  useEffect(() => {
+    raw.forEach((m: any) => {
+      const prev = prevScores[m.id];
+      if (prev) {
+        const curH = m.score?.fullTime?.home ?? null;
+        const curA = m.score?.fullTime?.away ?? null;
+        if (prev.home !== curH || prev.away !== curA) {
+          // Scores changed — keep the record updated; animation handled in render
+        }
+      }
+    });
+    const map: Record<number, {home: number|null, away: number|null}> = {};
+    raw.forEach((m: any) => {
+      map[m.id] = { home: m.score?.fullTime?.home ?? null, away: m.score?.fullTime?.away ?? null };
+    });
+    setPrevScores(map);
+  }, [raw]);
+
+  // ── Auto-refresh every 30 seconds ──
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/matches');
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.matches) { setRaw(json.matches); checkResults(json.matches); }
+        }
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Merge: static data for initial display, API data for real-time updates
@@ -73,9 +108,49 @@ export default function HomePage() {
   const groups = st.filter((s:any) => s.type==='TOTAL' && s.group);
   const ags = groups.find((g:any) => ng(g.group)===ag);
 
-  // AI精选推荐
-  const hero = upcoming[0];
-  const heroPred = hero ? matchPreds.get(hero.id) : null;
+  // ── Hero: dynamic priority LIVE > upcoming > finished ──
+  const live = todayAll.filter((m:any) => m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === 'PAUSED');
+  type HeroMode = 'live' | 'countdown' | 'finished' | 'preview';
+  let hero: any = null;
+  let heroMode: HeroMode = 'preview';
+  if (live.length > 0) {
+    hero = live[0];
+    heroMode = 'live';
+  } else if (upcoming.length > 0) {
+    hero = upcoming[0];
+    const matchTimeStr = hero.utcDate || `${hero.date || today}T${hero.time || '00:00'}:00+08:00`;
+    const matchTime = new Date(matchTimeStr);
+    const diff = matchTime.getTime() - Date.now();
+    heroMode = (diff > 0 && diff <= 7200000) ? 'countdown' : 'preview';
+  } else if (finished.length > 0) {
+    hero = finished[finished.length - 1];
+    heroMode = 'finished';
+  }
+  // Build prediction for hero regardless of mode
+  const heroPred = hero ? (matchPreds.get(hero.id) || (() => {
+    const hi = ti(hero.homeTeam?.tla), ai = ti(hero.awayTeam?.tla);
+    const h = getTeam(hi), a = getTeam(ai);
+    return (h && a) ? predictMatchAdvanced(h.id, a.id) : null;
+  })()) : null;
+
+  // ── Countdown timer (every second) ──
+  useEffect(() => {
+    if (heroMode !== 'countdown' || !hero) return;
+    const update = () => {
+      const matchTimeStr = hero.utcDate || `${hero.date || today}T${hero.time || '00:00'}:00+08:00`;
+      const matchTime = new Date(matchTimeStr);
+      const diff = matchTime.getTime() - Date.now();
+      if (diff <= 0) { setCountdown({ h: 0, m: 0, s: 0 }); return; }
+      setCountdown({
+        h: Math.floor(diff / 3600000),
+        m: Math.floor((diff % 3600000) / 60000),
+        s: Math.floor((diff % 60000) / 1000),
+      });
+    };
+    update();
+    const iv = setInterval(update, 1000);
+    return () => clearInterval(iv);
+  }, [heroMode, hero, today]);
 
   // 最稳: highest confidence among upcoming
   const allUpcoming = all.filter((m:any) => m.status !== 'FINISHED');
@@ -103,69 +178,253 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-3 py-4 relative">
         {/* Radial glow behind hero */}
         <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(circle at 50% 30%, rgba(59,130,246,0.08) 0%, transparent 60%)'}} />
-        {hero && heroPred ? (() => { const m = hero; const p = heroPred; const hi=ti(m.homeTeam?.tla), ai=ti(m.awayTeam?.tla); const h=getTeam(hi), a=getTeam(ai); return (
-          <div className="relative bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden">
-            <div className="p-5 sm:p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-[11px] bg-gold/20 text-gold px-2.5 py-1 rounded-full font-bold">今日焦点</span>
-                {m.group && <span className="text-[11px] bg-white/10 text-white/60 px-2 py-0.5 rounded">{ng(m.group)}组</span>}
-                <span className="text-[11px] text-white/30 ml-auto">{bj(m.utcDate).date} {bj(m.utcDate).time}</span>
-              </div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex flex-col items-center flex-1">
-                  <span className="text-4xl sm:text-5xl mb-2">{h?.flag}</span>
-                  <h2 className="text-white font-extrabold text-lg sm:text-xl">{h?.name||m.homeTeam?.shortName}</h2>
-                  <p className="text-white/30 text-[11px] mt-0.5">{h ? `FIFA #${h.fifaRank} · ELO ${h.elo}` : ''}</p>
+        {(() => {
+          if (!hero) return (
+            <div className="bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/10 p-16 text-center text-white/20"><div className="text-5xl mb-4">⚽</div><p className="text-lg">今日无焦点比赛</p><Link href="/schedule" className="text-gold text-sm hover:underline mt-3 inline-block">浏览赛程 →</Link></div>
+          );
+          const m = hero; const p = heroPred;
+          const hi=ti(m.homeTeam?.tla), ai=ti(m.awayTeam?.tla);
+          const h=getTeam(hi), a=getTeam(ai);
+
+          // Score flash detection
+          const curHome = m.score?.fullTime?.home ?? null;
+          const curAway = m.score?.fullTime?.away ?? null;
+          const prev = prevScores[m.id];
+          const scoreFlashed = prev && curHome !== null && curAway !== null && (prev.home !== curHome || prev.away !== curAway);
+
+          // Prediction accuracy check for finished matches
+          const predMatch = p && m.status === 'FINISHED' && curHome !== null && curAway !== null ? (() => {
+            const [ph, pa] = p.claude.predictedScore.split('-').map(Number);
+            const [qh, qa] = p.qwen.predictedScore.split('-').map(Number);
+            const claudeHit = ph === curHome && pa === curAway;
+            const qwenHit = qh === curHome && qa === curAway;
+            const claudeResult = (ph > pa ? 'HOME' : pa > ph ? 'AWAY' : 'DRAW') === (curHome > curAway ? 'HOME' : curAway > curHome ? 'AWAY' : 'DRAW');
+            const qwenResult = (qh > qa ? 'HOME' : qa > qh ? 'AWAY' : 'DRAW') === (curHome > curAway ? 'HOME' : curAway > curHome ? 'AWAY' : 'DRAW');
+            return { claudeHit, qwenHit, claudeResult, qwenResult };
+          })() : null;
+
+          return (
+            <div className="relative bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden">
+              <div className="p-5 sm:p-6">
+                {/* Header badge */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-[11px] bg-gold/20 text-gold px-2.5 py-1 rounded-full font-bold">
+                    🔥 今日焦点{heroMode === 'live' ? ' · LIVE' : ''}
+                  </span>
+                  {heroMode === 'live' && (
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      <span className="text-[10px] text-red-400 font-bold">LIVE</span>
+                    </span>
+                  )}
+                  {m.group && <span className="text-[11px] bg-white/10 text-white/60 px-2 py-0.5 rounded">{ng(m.group)}组</span>}
+                  <span className="text-[11px] text-white/30 ml-auto">{bj(m.utcDate).date}</span>
                 </div>
-                <div className="flex-shrink-0 mx-6 sm:mx-10 text-center">
-                  <div className="text-3xl sm:text-4xl font-extrabold text-white/10 mb-3">VS</div>
-                  <div className="flex gap-3 justify-center">
-                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-1.5 text-center">
-                      <div className="text-[9px] text-purple-400 mb-0.5">Claude</div>
-                      <div className="text-sm font-bold text-purple-300 font-mono">{p.claude.predictedScore}</div>
+
+                {/* ── LIVE mode ── */}
+                {heroMode === 'live' && (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{h?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{h?.name||m.homeTeam?.shortName}</h2>
+                      </div>
+                      <div className="flex-shrink-0 mx-5 text-center">
+                        {curHome !== null && curAway !== null ? (
+                          <div className={`transition-all duration-300 ${scoreFlashed ? 'scale-110' : ''}`}>
+                            <div className={`text-4xl sm:text-5xl font-extrabold tabular-nums ${scoreFlashed ? 'text-gold' : 'text-green-400'}`}>
+                              {curHome} - {curAway}
+                            </div>
+                            <div className="text-sm text-green-400 font-bold mt-1.5">
+                              {typeof m.score?.duration === 'string' && m.score.duration.includes("'") ? m.score.duration : "LIVE"}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-3xl sm:text-4xl font-extrabold text-green-400/60 mb-1.5">VS</div>
+                            <div className="text-sm text-green-400 font-bold animate-pulse">LIVE</div>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{a?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{a?.name||m.awayTeam?.shortName}</h2>
+                      </div>
                     </div>
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-1.5 text-center">
-                      <div className="text-[9px] text-blue-400 mb-0.5">千问</div>
-                      <div className="text-sm font-bold text-blue-300 font-mono">{p.qwen.predictedScore}</div>
+                    {/* Downgraded AI prediction bar */}
+                    {p && (
+                      <div className="border-t border-white/[0.06] pt-3 mt-1">
+                        <div className="flex items-center justify-center gap-6 text-[10px]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-purple-400/70">Claude:</span>
+                            <span className="text-white/50 font-mono">{p.claude.predictedScore}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-blue-400/70">千问:</span>
+                            <span className="text-white/50 font-mono">{p.qwen.predictedScore}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-white/30">{p.winner}胜率</span>
+                            <span className="text-gold/70 font-bold">{p.homeWinProb > p.awayWinProb ? p.homeWinProb : p.awayWinProb}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── Countdown mode ── */}
+                {heroMode === 'countdown' && (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{h?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{h?.name||m.homeTeam?.shortName}</h2>
+                      </div>
+                      <div className="flex-shrink-0 mx-5 text-center">
+                        <div className="text-sm text-white/30 mb-2">距离开赛</div>
+                        <div className="text-3xl sm:text-4xl font-extrabold text-gold font-mono tabular-nums tracking-wider">
+                          {String(countdown.h).padStart(2,'0')}:{String(countdown.m).padStart(2,'0')}:{String(countdown.s).padStart(2,'0')}
+                        </div>
+                        <div className="text-[10px] text-white/20 mt-1.5">{bj(m.utcDate).time} 开赛</div>
+                      </div>
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{a?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{a?.name||m.awayTeam?.shortName}</h2>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-center flex-1">
-                  <span className="text-4xl sm:text-5xl mb-2">{a?.flag}</span>
-                  <h2 className="text-white font-extrabold text-lg sm:text-xl">{a?.name||m.awayTeam?.shortName}</h2>
-                  <p className="text-white/30 text-[11px] mt-0.5">{a ? `FIFA #${a.fifaRank} · ELO ${a.elo}` : ''}</p>
-                </div>
+                    {/* AI predictions */}
+                    {p && (
+                      <div className="border-t border-white/[0.06] pt-3 mt-1">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-[10px]">
+                            <span className="text-gold font-bold">{p.winner}胜</span>
+                            <span className="text-white/30">置信度 {p.confidence}%</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="bg-purple-500/8 border border-purple-500/15 rounded px-2 py-0.5 text-center">
+                              <span className="text-[8px] text-purple-400/70 mr-1">Claude</span>
+                              <span className="text-[11px] font-bold text-purple-300/80 font-mono">{p.claude.predictedScore}</span>
+                            </div>
+                            <div className="bg-blue-500/8 border border-blue-500/15 rounded px-2 py-0.5 text-center">
+                              <span className="text-[8px] text-blue-400/70 mr-1">千问</span>
+                              <span className="text-[11px] font-bold text-blue-300/80 font-mono">{p.qwen.predictedScore}</span>
+                            </div>
+                          </div>
+                          <div className="hidden sm:block w-24 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                            <div className="h-full bg-gold/50 rounded-full" style={{width:`${p.confidence}%`}} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── Finished mode ── */}
+                {heroMode === 'finished' && (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{h?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{h?.name||m.homeTeam?.shortName}</h2>
+                      </div>
+                      <div className="flex-shrink-0 mx-5 text-center">
+                        {curHome !== null && curAway !== null ? (
+                          <>
+                            <div className="text-4xl sm:text-5xl font-extrabold text-white tabular-nums">{curHome} - {curAway}</div>
+                            <div className="inline-block text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-bold mt-2">FT</div>
+                          </>
+                        ) : (
+                          <div className="text-3xl font-extrabold text-white/30">VS</div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{a?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{a?.name||m.awayTeam?.shortName}</h2>
+                      </div>
+                    </div>
+                    {/* Prediction accuracy */}
+                    {predMatch && (
+                      <div className="border-t border-white/[0.06] pt-3 mt-1">
+                        <div className="flex items-center justify-center gap-6 text-[10px]">
+                          <span className={`font-bold ${predMatch.claudeHit ? 'text-green-400' : predMatch.claudeResult ? 'text-yellow-400' : 'text-red-400'}`}>
+                            Claude: {p?.claude.predictedScore} {predMatch.claudeHit ? '✓ 命中' : predMatch.claudeResult ? '✓ 胜负对' : '✗'}
+                          </span>
+                          <span className={`font-bold ${predMatch.qwenHit ? 'text-green-400' : predMatch.qwenResult ? 'text-yellow-400' : 'text-red-400'}`}>
+                            千问: {p?.qwen.predictedScore} {predMatch.qwenHit ? '✓ 命中' : predMatch.qwenResult ? '✓ 胜负对' : '✗'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── Preview mode (default pre-match) ── */}
+                {heroMode === 'preview' && (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{h?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{h?.name||m.homeTeam?.shortName}</h2>
+                        <p className="text-white/30 text-[11px] mt-0.5">{h ? `FIFA #${h.fifaRank} · ELO ${h.elo}` : ''}</p>
+                      </div>
+                      <div className="flex-shrink-0 mx-4 text-center">
+                        <div className="text-3xl sm:text-4xl font-extrabold text-white/10 mb-2">VS</div>
+                        <div className="text-xs text-white/20 font-mono">{bj(m.utcDate).time}</div>
+                        {p && (
+                          <div className="flex gap-2 justify-center mt-3">
+                            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-2.5 py-1 text-center">
+                              <div className="text-[8px] text-purple-400 mb-0.5">Claude</div>
+                              <div className="text-xs font-bold text-purple-300 font-mono">{p.claude.predictedScore}</div>
+                            </div>
+                            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 text-center">
+                              <div className="text-[8px] text-blue-400 mb-0.5">千问</div>
+                              <div className="text-xs font-bold text-blue-300 font-mono">{p.qwen.predictedScore}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center flex-1">
+                        <span className="text-4xl sm:text-5xl mb-1.5">{a?.flag}</span>
+                        <h2 className="text-white font-extrabold text-base sm:text-lg">{a?.name||m.awayTeam?.shortName}</h2>
+                        <p className="text-white/30 text-[11px] mt-0.5">{a ? `FIFA #${a.fifaRank} · ELO ${a.elo}` : ''}</p>
+                      </div>
+                    </div>
+                    {/* Win probability bar */}
+                    {p && (
+                      <>
+                        <div className="mb-2.5">
+                          <div className="flex justify-between text-[10px] text-white/40 mb-1.5">
+                            <span>{h?.name||'?'} {p.homeWinProb}%</span>
+                            <span>平 {p.drawProb}%</span>
+                            <span>{a?.name||'?'} {p.awayWinProb}%</span>
+                          </div>
+                          <div className="flex h-2 rounded-full overflow-hidden">
+                            <div className="bg-green-500/70" style={{width:`${p.homeWinProb}%`}} />
+                            <div className="bg-white/10" style={{width:`${p.drawProb}%`}} />
+                            <div className="bg-orange-500/70" style={{width:`${p.awayWinProb}%`}} />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-gold font-bold">{p.winner}胜</span>
+                            <span className="text-white/30">置信度 {p.confidence}%</span>
+                          </div>
+                          <div className="flex gap-1.5">
+                            {p.topScores.map((s: any, i: number) => (
+                              <span key={i} className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${i===0?'bg-gold/20 text-gold':'bg-white/[0.06] text-white/40'}`}>{s.home}:{s.away}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
-              {/* Win probability bar */}
-              <div className="mb-3">
-                <div className="flex justify-between text-[10px] text-white/40 mb-1.5">
-                  <span>{h?.name||'?'} {p.homeWinProb}%</span>
-                  <span>平 {p.drawProb}%</span>
-                  <span>{a?.name||'?'} {p.awayWinProb}%</span>
-                </div>
-                <div className="flex h-2 rounded-full overflow-hidden">
-                  <div className="bg-green-500/70" style={{width:`${p.homeWinProb}%`}} />
-                  <div className="bg-white/10" style={{width:`${p.drawProb}%`}} />
-                  <div className="bg-orange-500/70" style={{width:`${p.awayWinProb}%`}} />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-gold font-bold">{p.winner}胜</span>
-                  <span className="text-white/30">置信度 {p.confidence}%</span>
-                </div>
-                <div className="flex gap-1.5">
-                  {p.topScores.map((s: any, i: number) => (
-                    <span key={i} className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${i===0?'bg-gold/20 text-gold':'bg-white/[0.06] text-white/40'}`}>{s.home}:{s.away}</span>
-                  ))}
-                </div>
-              </div>
+              <Link href={`/match/${midIdx(m.id)}`} className="block text-center py-2.5 bg-white/[0.03] hover:bg-white/[0.06] text-white/40 hover:text-gold text-xs font-medium transition-colors">查看完整 AI 分析 →</Link>
             </div>
-            <Link href={`/match/${midIdx(m.id)}`} className="block text-center py-2.5 bg-white/[0.03] hover:bg-white/[0.06] text-white/40 hover:text-gold text-xs font-medium transition-colors">查看完整 AI 分析 →</Link>
-          </div>
-        );})() : (
-          <div className="bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/10 p-16 text-center text-white/20"><div className="text-5xl mb-4">⚽</div><p className="text-lg">今日无焦点比赛</p><Link href="/schedule" className="text-gold text-sm hover:underline mt-3 inline-block">浏览赛程 →</Link></div>
-        )}
+          );
+        })()}
       </section>
 
       {/* ═══════ AI精选推荐 ═══════ */}
