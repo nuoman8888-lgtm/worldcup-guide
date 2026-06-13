@@ -73,9 +73,17 @@ export default function HomePage() {
   const groups = st.filter((s:any) => s.type==='TOTAL' && s.group);
   const ags = groups.find((g:any) => ng(g.group)===ag);
 
-  // AI精选推荐
-  const hero = upcoming[0];
-  const heroPred = hero ? matchPreds.get(hero.id) : null;
+  // ── Hero: 当天优先; 当天全结束 → 递补下一场; 动态标题 ──
+  const allFutureUpcoming = all.filter((m:any) => m.status !== 'FINISHED')
+    .sort((a:any,b:any) => a.utcDate.localeCompare(b.utcDate));
+  const hero = upcoming.length > 0 ? upcoming[0] : (allFutureUpcoming[0] ?? null);
+  const heroDate = hero ? bj(hero.utcDate).date : '';
+  const isTodayHero = heroDate === today;
+  const heroPred = hero ? (matchPreds.get(hero.id) || (() => {
+    const hi = ti(hero.homeTeam?.tla), ai = ti(hero.awayTeam?.tla);
+    const h = getTeam(hi), a = getTeam(ai);
+    return (h && a) ? predictMatchAdvanced(h.id, a.id) : null;
+  })()) : null;
 
   // 最稳: highest confidence among upcoming
   const allUpcoming = all.filter((m:any) => m.status !== 'FINISHED');
@@ -103,69 +111,169 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-3 py-4 relative">
         {/* Radial glow behind hero */}
         <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(circle at 50% 30%, rgba(59,130,246,0.08) 0%, transparent 60%)'}} />
-        {hero && heroPred ? (() => { const m = hero; const p = heroPred; const hi=ti(m.homeTeam?.tla), ai=ti(m.awayTeam?.tla); const h=getTeam(hi), a=getTeam(ai); return (
-          <div className="relative bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden">
-            <div className="p-5 sm:p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-[11px] bg-gold/20 text-gold px-2.5 py-1 rounded-full font-bold">今日焦点</span>
-                {m.group && <span className="text-[11px] bg-white/10 text-white/60 px-2 py-0.5 rounded">{ng(m.group)}组</span>}
-                <span className="text-[11px] text-white/30 ml-auto">{bj(m.utcDate).date} {bj(m.utcDate).time}</span>
-              </div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex flex-col items-center flex-1">
-                  <span className="text-4xl sm:text-5xl mb-2">{h?.flag}</span>
-                  <h2 className="text-white font-extrabold text-lg sm:text-xl">{h?.name||m.homeTeam?.shortName}</h2>
-                  <p className="text-white/30 text-[11px] mt-0.5">{h ? `FIFA #${h.fifaRank} · ELO ${h.elo}` : ''}</p>
+        {(() => {
+          if (!hero || !heroPred) return (
+            <div className="bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/10 p-16 text-center text-white/20"><div className="text-5xl mb-4">⚽</div><p className="text-lg">暂无比赛数据</p><Link href="/schedule" className="text-gold text-sm hover:underline mt-3 inline-block">浏览赛程 →</Link></div>
+          );
+          const m = hero; const p = heroPred;
+          const hi=ti(m.homeTeam?.tla), ai=ti(m.awayTeam?.tla);
+          const h=getTeam(hi), a=getTeam(ai);
+          const isLive = m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === 'PAUSED';
+          const isFinished = m.status === 'FINISHED';
+          const scoreH = m.score?.fullTime?.home ?? null;
+          const scoreA = m.score?.fullTime?.away ?? null;
+          const hasScore = scoreH !== null && scoreA !== null;
+          // Prediction accuracy for finished matches
+          const predCheck = isFinished && hasScore && p ? (() => {
+            const [ch, ca] = p.claude.predictedScore.split('-').map(Number);
+            const [qh, qa] = p.qwen.predictedScore.split('-').map(Number);
+            const cHit = ch === scoreH && ca === scoreA;
+            const qHit = qh === scoreH && qa === scoreA;
+            const cResult = (ch > ca ? 1 : ca > ch ? -1 : 0) === (scoreH! > scoreA! ? 1 : scoreA! > scoreH! ? -1 : 0);
+            const qResult = (qh > qa ? 1 : qa > qh ? -1 : 0) === (scoreH! > scoreA! ? 1 : scoreA! > scoreH! ? -1 : 0);
+            return { cHit, qHit, cResult, qResult };
+          })() : null;
+
+          return (
+            <div className="relative bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden">
+              <div className="p-5 sm:p-6">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold ${isLive ? 'bg-red-500/20 text-red-400' : isFinished ? 'bg-blue-500/20 text-blue-400' : 'bg-gold/20 text-gold'}`}>
+                    {isLive ? '🔴 正在进行' : isFinished ? '✅ 比赛结束' : isTodayHero ? '🔥 今日焦点' : '⏭ 下一场焦点'}
+                  </span>
+                  {isLive && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+                  {m.group && <span className="text-[11px] bg-white/10 text-white/60 px-2 py-0.5 rounded">{ng(m.group)}组</span>}
+                  <span className="text-[11px] text-white/30 ml-auto">{bj(m.utcDate).date} {bj(m.utcDate).time}</span>
                 </div>
-                <div className="flex-shrink-0 mx-6 sm:mx-10 text-center">
-                  <div className="text-3xl sm:text-4xl font-extrabold text-white/10 mb-3">VS</div>
-                  <div className="flex gap-3 justify-center">
-                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-1.5 text-center">
-                      <div className="text-[9px] text-purple-400 mb-0.5">Claude</div>
-                      <div className="text-sm font-bold text-purple-300 font-mono">{p.claude.predictedScore}</div>
+
+                {/* ── LIVE mode ── */}
+                {isLive && (
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl sm:text-5xl mb-1.5">{h?.flag}</span>
+                      <h2 className="text-white font-extrabold text-base sm:text-lg">{h?.name||m.homeTeam?.shortName}</h2>
                     </div>
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-1.5 text-center">
-                      <div className="text-[9px] text-blue-400 mb-0.5">千问</div>
-                      <div className="text-sm font-bold text-blue-300 font-mono">{p.qwen.predictedScore}</div>
+                    <div className="flex-shrink-0 mx-5 text-center">
+                      {hasScore ? (
+                        <>
+                          <div className="text-4xl sm:text-5xl font-extrabold text-green-400 tabular-nums">{scoreH} - {scoreA}</div>
+                          <div className="text-sm text-green-400/80 font-bold mt-1.5">
+                            {typeof m.score?.duration === 'string' && m.score.duration.includes("'") ? m.score.duration : 'LIVE'}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-3xl sm:text-4xl font-extrabold text-green-400/50 mb-1.5">VS</div>
+                          <div className="text-sm text-green-400 font-bold animate-pulse">LIVE</div>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl sm:text-5xl mb-1.5">{a?.flag}</span>
+                      <h2 className="text-white font-extrabold text-base sm:text-lg">{a?.name||m.awayTeam?.shortName}</h2>
                     </div>
                   </div>
-                </div>
-                <div className="flex flex-col items-center flex-1">
-                  <span className="text-4xl sm:text-5xl mb-2">{a?.flag}</span>
-                  <h2 className="text-white font-extrabold text-lg sm:text-xl">{a?.name||m.awayTeam?.shortName}</h2>
-                  <p className="text-white/30 text-[11px] mt-0.5">{a ? `FIFA #${a.fifaRank} · ELO ${a.elo}` : ''}</p>
-                </div>
+                )}
+
+                {/* ── FINISHED mode ── */}
+                {isFinished && (
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl sm:text-5xl mb-1.5">{h?.flag}</span>
+                      <h2 className="text-white font-extrabold text-base sm:text-lg">{h?.name||m.homeTeam?.shortName}</h2>
+                    </div>
+                    <div className="flex-shrink-0 mx-5 text-center">
+                      {hasScore ? (
+                        <>
+                          <div className="text-4xl sm:text-5xl font-extrabold text-white tabular-nums">{scoreH} - {scoreA}</div>
+                          <div className="inline-block text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-bold mt-2">FT</div>
+                        </>
+                      ) : (
+                        <div className="text-3xl font-extrabold text-white/30">VS</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl sm:text-5xl mb-1.5">{a?.flag}</span>
+                      <h2 className="text-white font-extrabold text-base sm:text-lg">{a?.name||m.awayTeam?.shortName}</h2>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Pre-match mode (default) ── */}
+                {!isLive && !isFinished && (
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl sm:text-5xl mb-1.5">{h?.flag}</span>
+                      <h2 className="text-white font-extrabold text-base sm:text-lg">{h?.name||m.homeTeam?.shortName}</h2>
+                      <p className="text-white/30 text-[11px] mt-0.5">{h ? `FIFA #${h.fifaRank} · ELO ${h.elo}` : ''}</p>
+                    </div>
+                    <div className="flex-shrink-0 mx-5 text-center">
+                      <div className="text-3xl sm:text-4xl font-extrabold text-white/10 mb-2">VS</div>
+                      <div className="flex gap-2 justify-center">
+                        <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-2.5 py-1 text-center">
+                          <div className="text-[8px] text-purple-400 mb-0.5">Claude</div>
+                          <div className="text-xs font-bold text-purple-300 font-mono">{p.claude.predictedScore}</div>
+                        </div>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 text-center">
+                          <div className="text-[8px] text-blue-400 mb-0.5">千问</div>
+                          <div className="text-xs font-bold text-blue-300 font-mono">{p.qwen.predictedScore}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl sm:text-5xl mb-1.5">{a?.flag}</span>
+                      <h2 className="text-white font-extrabold text-base sm:text-lg">{a?.name||m.awayTeam?.shortName}</h2>
+                      <p className="text-white/30 text-[11px] mt-0.5">{a ? `FIFA #${a.fifaRank} · ELO ${a.elo}` : ''}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Bottom: AI info or prediction accuracy ── */}
+                {isFinished && predCheck ? (
+                  <div className="border-t border-white/[0.06] pt-3 mt-1">
+                    <div className="flex items-center justify-center gap-6 text-[10px]">
+                      <span className={`font-bold ${predCheck.cHit ? 'text-green-400' : predCheck.cResult ? 'text-yellow-400' : 'text-red-400'}`}>
+                        Claude: {p.claude.predictedScore} {predCheck.cHit ? '✓ 命中' : predCheck.cResult ? '✓ 胜负对' : '✗'}
+                      </span>
+                      <span className={`font-bold ${predCheck.qHit ? 'text-green-400' : predCheck.qResult ? 'text-yellow-400' : 'text-red-400'}`}>
+                        千问: {p.qwen.predictedScore} {predCheck.qHit ? '✓ 命中' : predCheck.qResult ? '✓ 胜负对' : '✗'}
+                      </span>
+                    </div>
+                  </div>
+                ) : !isFinished && (
+                  <div className="border-t border-white/[0.06] pt-3 mt-1">
+                    {/* Win probability bar */}
+                    <div className="mb-2.5">
+                      <div className="flex justify-between text-[10px] text-white/40 mb-1.5">
+                        <span>{h?.name||'?'} {p.homeWinProb}%</span>
+                        <span>平 {p.drawProb}%</span>
+                        <span>{a?.name||'?'} {p.awayWinProb}%</span>
+                      </div>
+                      <div className="flex h-2 rounded-full overflow-hidden">
+                        <div className="bg-green-500/70" style={{width:`${p.homeWinProb}%`}} />
+                        <div className="bg-white/10" style={{width:`${p.drawProb}%`}} />
+                        <div className="bg-orange-500/70" style={{width:`${p.awayWinProb}%`}} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-gold font-bold">{p.winner}胜</span>
+                        <span className="text-white/30">置信度 {p.confidence}%</span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        {p.topScores.map((s: any, i: number) => (
+                          <span key={i} className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${i===0?'bg-gold/20 text-gold':'bg-white/[0.06] text-white/40'}`}>{s.home}:{s.away}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              {/* Win probability bar */}
-              <div className="mb-3">
-                <div className="flex justify-between text-[10px] text-white/40 mb-1.5">
-                  <span>{h?.name||'?'} {p.homeWinProb}%</span>
-                  <span>平 {p.drawProb}%</span>
-                  <span>{a?.name||'?'} {p.awayWinProb}%</span>
-                </div>
-                <div className="flex h-2 rounded-full overflow-hidden">
-                  <div className="bg-green-500/70" style={{width:`${p.homeWinProb}%`}} />
-                  <div className="bg-white/10" style={{width:`${p.drawProb}%`}} />
-                  <div className="bg-orange-500/70" style={{width:`${p.awayWinProb}%`}} />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-gold font-bold">{p.winner}胜</span>
-                  <span className="text-white/30">置信度 {p.confidence}%</span>
-                </div>
-                <div className="flex gap-1.5">
-                  {p.topScores.map((s: any, i: number) => (
-                    <span key={i} className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${i===0?'bg-gold/20 text-gold':'bg-white/[0.06] text-white/40'}`}>{s.home}:{s.away}</span>
-                  ))}
-                </div>
-              </div>
+              <Link href={`/match/${midIdx(m.id)}`} className="block text-center py-2.5 bg-white/[0.03] hover:bg-white/[0.06] text-white/40 hover:text-gold text-xs font-medium transition-colors">查看完整 AI 分析 →</Link>
             </div>
-            <Link href={`/match/${midIdx(m.id)}`} className="block text-center py-2.5 bg-white/[0.03] hover:bg-white/[0.06] text-white/40 hover:text-gold text-xs font-medium transition-colors">查看完整 AI 分析 →</Link>
-          </div>
-        );})() : (
-          <div className="bg-navy/80 backdrop-blur-xl rounded-2xl border border-white/10 p-16 text-center text-white/20"><div className="text-5xl mb-4">⚽</div><p className="text-lg">今日无焦点比赛</p><Link href="/schedule" className="text-gold text-sm hover:underline mt-3 inline-block">浏览赛程 →</Link></div>
-        )}
+          );
+        })()}
       </section>
 
       {/* ═══════ AI精选推荐 ═══════ */}

@@ -41,9 +41,16 @@ export function CountdownBar({ apiMatches }: { apiMatches?: ApiMatch[] | null })
         return;
       }
 
-      // Find next upcoming match from static schedule
+      // Find next upcoming match from static schedule (exclude expired >2h)
+      const nowTs = Date.now();
       const upcoming = staticMatches
         .filter(m => m.date >= today && m.status !== 'finished')
+        .filter(m => {
+          const [th, tm] = m.time.split(':').map(Number);
+          const md = new Date(m.date + 'T00:00:00+08:00');
+          md.setHours(th, tm, 0, 0);
+          return md.getTime() - nowTs > -7200000; // skip matches started >2h ago
+        })
         .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 
       const next = upcoming[0];
