@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+// import Link from 'next/link';
 import { getMatch, stageNames, formatDate, allMatches } from '@/data/matches';
 import { getTeam, type Team } from '@/data/teams';
 import { tlaToTeamId } from '@/lib/use-api-data';
-import { predictMatchAdvanced } from '@/lib/ai';
+import { AI_MODELS, MODEL_ORDER } from '@/data/ai-models';
+import { getPredictions } from '@/data/predictions';
 
 interface ApiMatch {
   id: number; utcDate: string; status: string; matchday: number;
@@ -94,7 +95,7 @@ export default function MatchClient({ id }: { id: string }) {
   const isLive = apiData?.status === 'IN_PLAY' || apiData?.status === 'LIVE';
   const score = apiData?.score;
 
-  const ai = homeTeam && awayTeam ? predictMatchAdvanced(homeTeam.id, awayTeam.id) : null;
+  const ai = getPredictions(id);
   const h2h = homeTeam && awayTeam ? generateH2H(homeTeam, awayTeam) : [];
   const odds = homeTeam && awayTeam ? calcOdds(homeTeam, awayTeam) : null;
 
@@ -123,7 +124,7 @@ export default function MatchClient({ id }: { id: string }) {
       <div className="text-5xl mb-4">❓</div>
       <p className="font-bold text-gray-500">对阵球队待定</p>
       <p className="text-sm mt-2">淘汰赛对阵将在小组赛结束后确定</p>
-      <Link href="/schedule" className="inline-block mt-4 text-gold-dark hover:underline font-medium">浏览赛程 →</Link>
+      <a href="/schedule" className="inline-block mt-4 text-gold-dark hover:underline font-medium">浏览赛程 →</a>
     </div>
   );
 
@@ -145,7 +146,7 @@ export default function MatchClient({ id }: { id: string }) {
 
         <div className="p-6 md:p-8">
           <div className="flex items-center justify-between">
-            <Link href={`/team/${homeTeam.id}`} className="flex flex-col items-center flex-1 hover:opacity-80 transition-opacity">
+            <a href={`/team/${homeTeam.id}`} className="flex flex-col items-center flex-1 hover:opacity-80 transition-opacity">
               <span className="text-5xl md:text-6xl mb-2">{homeTeam.flag}</span>
               <h2 className="text-lg md:text-xl font-bold text-gray-900 text-center">{homeTeam.name}</h2>
               <p className="text-xs text-gray-400">{homeTeam.nameEn}</p>
@@ -153,7 +154,7 @@ export default function MatchClient({ id }: { id: string }) {
                 <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">FIFA #{homeTeam.fifaRank}</span>
                 <span className="bg-navy/10 text-navy px-1.5 py-0.5 rounded">ELO {homeTeam.elo}</span>
               </div>
-            </Link>
+            </a>
 
             <div className="flex-shrink-0 mx-6 md:mx-10 text-center">
               {isFinished && score ? (
@@ -175,7 +176,7 @@ export default function MatchClient({ id }: { id: string }) {
               )}
             </div>
 
-            <Link href={`/team/${awayTeam.id}`} className="flex flex-col items-center flex-1 hover:opacity-80 transition-opacity">
+            <a href={`/team/${awayTeam.id}`} className="flex flex-col items-center flex-1 hover:opacity-80 transition-opacity">
               <span className="text-5xl md:text-6xl mb-2">{awayTeam.flag}</span>
               <h2 className="text-lg md:text-xl font-bold text-gray-900 text-center">{awayTeam.name}</h2>
               <p className="text-xs text-gray-400">{awayTeam.nameEn}</p>
@@ -183,7 +184,7 @@ export default function MatchClient({ id }: { id: string }) {
                 <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">FIFA #{awayTeam.fifaRank}</span>
                 <span className="bg-navy/10 text-navy px-1.5 py-0.5 rounded">ELO {awayTeam.elo}</span>
               </div>
-            </Link>
+            </a>
           </div>
 
           <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-center gap-6 text-xs text-gray-500">
@@ -194,70 +195,109 @@ export default function MatchClient({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* ═══════ AI Joint Prediction (2-col) ═══════ */}
+      {/* ═══════ AI 4-Model Prediction ═══════ */}
       {ai && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-700 to-navy px-5 py-3 text-white">
-            <h2 className="font-bold text-sm flex items-center gap-2">🤖 AI 联合预测 · Claude + 千问</h2>
+          <div className="bg-gradient-to-r from-purple-700 via-navy to-blue-700 px-5 py-3 text-white">
+            <h2 className="font-bold text-sm flex items-center gap-2">🤖 AI世界杯实验室 · 四大模型预测</h2>
           </div>
           <div className="p-5 space-y-4">
-            {/* Model comparison */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-purple-50 rounded-lg p-4">
-                <div className="text-xs font-bold text-purple-600 mb-2">🧠 Claude 预测</div>
-                <div className="grid grid-cols-3 gap-2 text-center mb-2">
-                  <div><div className="text-[11px] text-gray-500">{homeTeam.name}胜</div><div className="text-lg font-extrabold text-gray-900">{ai.claude.predictedScore.startsWith(homeTeam.name) ? 65 : ai.homeWinProb}%</div></div>
-                  <div><div className="text-[11px] text-gray-500">平局</div><div className="text-lg font-extrabold text-gray-600">{ai.drawProb}%</div></div>
-                  <div><div className="text-[11px] text-gray-500">{awayTeam.name}胜</div><div className="text-lg font-extrabold text-gray-900">{ai.awayWinProb}%</div></div>
-                </div>
-                <div className="text-xs text-gray-600 leading-relaxed">{ai.claude.reasoning}</div>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-xs font-bold text-blue-600 mb-2">🌊 千问 预测</div>
-                <div className="grid grid-cols-3 gap-2 text-center mb-2">
-                  <div><div className="text-[11px] text-gray-500">{homeTeam.name}胜</div><div className="text-lg font-extrabold text-gray-900">{ai.qwen.predictedScore.startsWith(homeTeam.name) ? 70 : ai.homeWinProb + 3}%</div></div>
-                  <div><div className="text-[11px] text-gray-500">平局</div><div className="text-lg font-extrabold text-gray-600">{Math.max(15, ai.drawProb - 2)}%</div></div>
-                  <div><div className="text-[11px] text-gray-500">{awayTeam.name}胜</div><div className="text-lg font-extrabold text-gray-900">{ai.awayWinProb - 1}%</div></div>
-                </div>
-                <div className="text-xs text-gray-600 leading-relaxed">{ai.qwen.reasoning}</div>
-              </div>
-            </div>
-
-            {/* Top 3 scores */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-xs font-bold text-gray-600 mb-3">📊 最可能比分</div>
-              <div className="space-y-2">
-                {ai.topScores.map((s, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-gray-400 w-5">{['①','②','③'][i]}</span>
-                    <span className="text-sm font-extrabold text-gray-900 tabular-nums w-10">{s.home}:{s.away}</span>
-                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${i===0?'bg-gold':i===1?'bg-navy':'bg-gray-400'}`} style={{width:`${Math.min(100, s.probability*3)}%`}} />
+            {/* 4 model cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {MODEL_ORDER.map(mid => {
+                const p = ai.predictions[mid];
+                const info = AI_MODELS[mid];
+                const isConsensus = ai.consensus.side === p.winner;
+                return (
+                  <div key={mid} className={`rounded-lg p-3 text-center ${isConsensus ? 'ring-2 ring-gold/30' : ''}`}
+                    style={{ backgroundColor: `${info.color}10`, borderColor: `${info.color}30`, borderWidth: 1 }}>
+                    <div className="text-lg mb-0.5">{info.icon}</div>
+                    <div className="text-[10px] font-bold text-gray-500 mb-1.5">{info.name}</div>
+                    <div className="text-lg font-extrabold font-mono" style={{ color: info.color }}>
+                      {p.predictedScore}
                     </div>
-                    <span className="text-xs font-bold text-gray-500 tabular-nums w-12 text-right">{s.probability}%</span>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{p.winner}胜</div>
+                    <div className="mt-1.5 h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${p.confidence}%`, backgroundColor: info.color, opacity: 0.7 }} />
+                    </div>
+                    <div className="text-[9px] text-gray-400 mt-1">置信度 {p.confidence}%</div>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+
+            {/* Consensus */}
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <span className="text-xs text-gray-500">模型共识：</span>
+              <span className="text-sm font-bold text-navy">{ai.consensus.side}</span>
+              <span className="text-xs text-gray-400 ml-1">
+                ({ai.consensus.modelCount}/{ai.consensus.total} 模型选择)
+              </span>
+            </div>
+
+            {/* Top 3 scores (from Claude as reference) */}
+            {ai.predictions.claude && (
+              <div className="bg-gold-50 rounded-lg border border-gold-light p-4">
+                <div className="text-xs font-bold text-gold-dark mb-2">📌 各模型推荐比分</div>
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  {MODEL_ORDER.map(mid => {
+                    const p = ai.predictions[mid];
+                    const info = AI_MODELS[mid];
+                    return (
+                      <div key={mid}>
+                        <span className="text-gray-400 text-[10px]">{info.name}</span>
+                        <div className="font-bold font-mono" style={{ color: info.color }}>{p.predictedScore}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Win/Draw/Loss — use Claude's probabilities as reference */}
+            <div className="bg-gradient-to-r from-gray-50 to-white rounded-lg border p-4">
+              <div className="text-xs font-bold text-gray-600 mb-3">📊 胜负平概率共识</div>
+              <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                <div>
+                  <span className="text-gray-500">{homeTeam.name}胜</span>
+                  <div className="font-extrabold text-navy text-lg">
+                    {Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].homeWinProb, 0) / 4)}%
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-500">平局</span>
+                  <div className="font-extrabold text-gray-500 text-lg">
+                    {Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].drawProb, 0) / 4)}%
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-500">{awayTeam.name}胜</span>
+                  <div className="font-extrabold text-orange-600 text-lg">
+                    {Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].awayWinProb, 0) / 4)}%
+                  </div>
+                </div>
+              </div>
+              {/* Bar */}
+              <div className="mt-3 flex h-2.5 rounded-full overflow-hidden">
+                <div className="bg-green-500" style={{ width: `${Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].homeWinProb, 0) / 4)}%` }} />
+                <div className="bg-gray-300" style={{ width: `${Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].drawProb, 0) / 4)}%` }} />
+                <div className="bg-orange-500" style={{ width: `${Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].awayWinProb, 0) / 4)}%` }} />
               </div>
             </div>
 
-            {/* Fusion conclusion */}
-            <div className="bg-gradient-to-r from-gold-50 to-white rounded-lg border border-gold p-4">
-              <div className="text-xs font-bold text-gold-dark mb-2">🎯 综合结论</div>
-              <div className="flex items-center gap-3">
-                <span className={`text-xs px-2 py-1 rounded font-bold ${ai.confidence >= 60 ? 'bg-green-100 text-green-700' : ai.confidence >= 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                  置信度 {ai.confidence >= 60 ? '高' : ai.confidence >= 40 ? '中' : '低'}
-                </span>
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-center text-sm">
-                <div><span className="text-gray-500">{homeTeam.name}胜</span><br/><span className="font-extrabold text-navy">{ai.homeWinProb}%</span></div>
-                <div><span className="text-gray-500">平局</span><br/><span className="font-extrabold text-gray-500">{ai.drawProb}%</span></div>
-                <div><span className="text-gray-500">{awayTeam.name}胜</span><br/><span className="font-extrabold text-orange-600">{ai.awayWinProb}%</span></div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-gold-light text-xs text-gray-500 space-y-0.5">
-                <p>📌 推荐比分：{ai.topScores.map((s,i) => `${s.home}-${s.away}${i<2?'、':''}`).join('')}</p>
-                <p>⚽ 总进球数：{ai.topScores[0].home + ai.topScores[0].away}-{ai.topScores[1].home + ai.topScores[1].away}球概率最高</p>
-                <p>🎯 双方均进球概率：{Math.round(ai.drawProb * 0.8 + Math.min(ai.homeWinProb, ai.awayWinProb) * 0.4)}%</p>
-              </div>
+            {/* Model reasoning */}
+            <div className="space-y-2">
+              {MODEL_ORDER.map(mid => {
+                const p = ai.predictions[mid];
+                const info = AI_MODELS[mid];
+                return (
+                  <div key={mid} className="flex items-start gap-2 text-xs">
+                    <span className="text-sm shrink-0">{info.icon}</span>
+                    <span className="text-gray-400 w-12 shrink-0 font-medium">{info.name}</span>
+                    <span className="text-gray-600">{p.reasoning}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -383,35 +423,44 @@ export default function MatchClient({ id }: { id: string }) {
             {/* AI vs Market comparison */}
             {ai && (
               <div className="bg-gold-50 rounded-lg border border-gold-light p-3">
-                <div className="text-xs font-bold text-gray-700 mb-2">🤖 AI 与市场赔率对比</div>
+                <div className="text-xs font-bold text-gray-700 mb-2">🤖 AI 平均概率 vs 市场赔率</div>
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div>
-                    <div className="text-gray-400 mb-0.5">赔率认为</div>
-                    <div className="font-bold text-gray-900">{odds.homePct}%</div>
-                    <div className="text-gray-400 mb-0.5 mt-1">AI 认为</div>
-                    <div className="font-bold text-navy">{ai.homeWinProb}%</div>
-                    <div className={`text-[10px] mt-0.5 font-medium ${ai.homeWinProb > odds.homePct ? 'text-green-600' : 'text-red-500'}`}>
-                      {ai.homeWinProb > odds.homePct ? '+' : ''}{(ai.homeWinProb - odds.homePct).toFixed(1)}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 mb-0.5">赔率认为</div>
-                    <div className="font-bold text-gray-900">{odds.drawPct}%</div>
-                    <div className="text-gray-400 mb-0.5 mt-1">AI 认为</div>
-                    <div className="font-bold text-navy">{ai.drawProb}%</div>
-                    <div className={`text-[10px] mt-0.5 font-medium ${ai.drawProb > odds.drawPct ? 'text-green-600' : 'text-red-500'}`}>
-                      {ai.drawProb > odds.drawPct ? '+' : ''}{(ai.drawProb - odds.drawPct).toFixed(1)}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 mb-0.5">赔率认为</div>
-                    <div className="font-bold text-gray-900">{odds.awayPct}%</div>
-                    <div className="text-gray-400 mb-0.5 mt-1">AI 认为</div>
-                    <div className="font-bold text-navy">{ai.awayWinProb}%</div>
-                    <div className={`text-[10px] mt-0.5 font-medium ${ai.awayWinProb > odds.awayPct ? 'text-green-600' : 'text-red-500'}`}>
-                      {ai.awayWinProb > odds.awayPct ? '+' : ''}{(ai.awayWinProb - odds.awayPct).toFixed(1)}%
-                    </div>
-                  </div>
+                  {(() => {
+                    const avgHome = Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].homeWinProb, 0) / 4);
+                    const avgDraw = Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].drawProb, 0) / 4);
+                    const avgAway = Math.round(MODEL_ORDER.reduce((s, m) => s + ai.predictions[m].awayWinProb, 0) / 4);
+                    return (
+                      <>
+                        <div>
+                          <div className="text-gray-400 mb-0.5">赔率认为</div>
+                          <div className="font-bold text-gray-900">{odds.homePct}%</div>
+                          <div className="text-gray-400 mb-0.5 mt-1">AI 认为</div>
+                          <div className="font-bold text-navy">{avgHome}%</div>
+                          <div className={`text-[10px] mt-0.5 font-medium ${avgHome > odds.homePct ? 'text-green-600' : 'text-red-500'}`}>
+                            {avgHome > odds.homePct ? '+' : ''}{(avgHome - odds.homePct).toFixed(1)}%
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 mb-0.5">赔率认为</div>
+                          <div className="font-bold text-gray-900">{odds.drawPct}%</div>
+                          <div className="text-gray-400 mb-0.5 mt-1">AI 认为</div>
+                          <div className="font-bold text-navy">{avgDraw}%</div>
+                          <div className={`text-[10px] mt-0.5 font-medium ${avgDraw > odds.drawPct ? 'text-green-600' : 'text-red-500'}`}>
+                            {avgDraw > odds.drawPct ? '+' : ''}{(avgDraw - odds.drawPct).toFixed(1)}%
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 mb-0.5">赔率认为</div>
+                          <div className="font-bold text-gray-900">{odds.awayPct}%</div>
+                          <div className="text-gray-400 mb-0.5 mt-1">AI 认为</div>
+                          <div className="font-bold text-navy">{avgAway}%</div>
+                          <div className={`text-[10px] mt-0.5 font-medium ${avgAway > odds.awayPct ? 'text-green-600' : 'text-red-500'}`}>
+                            {avgAway > odds.awayPct ? '+' : ''}{(avgAway - odds.awayPct).toFixed(1)}%
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -430,7 +479,7 @@ export default function MatchClient({ id }: { id: string }) {
               {otherGroupMatches.map(m => {
                 const hm = getTeam(m.homeTeamId); const am = getTeam(m.awayTeamId);
                 return (
-                  <Link key={m.id} href={`/match/${m.id}`} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors text-center">
+                  <a key={m.id} href={`/match/${m.id}`} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors text-center">
                     <div className="text-[11px] text-gray-400 mb-2">{formatDate(m.date)} {m.time}</div>
                     <div className="flex items-center justify-center gap-2">
                       {hm && <span className="text-lg">{hm.flag}</span>}
@@ -439,7 +488,7 @@ export default function MatchClient({ id }: { id: string }) {
                       <span className="text-xs font-medium text-gray-900">{am?.name||'TBD'}</span>
                       {am && <span className="text-lg">{am.flag}</span>}
                     </div>
-                  </Link>
+                  </a>
                 );
               })}
             </div>

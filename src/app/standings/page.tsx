@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import PageTracker from '@/components/PageTracker';
+// import Link from 'next/link';
+// import PageTracker from '@/components/PageTracker';
 import { useApiStandings, tlaToTeamId, normalizeGroup } from '@/lib/use-api-data';
 import { getTeam } from '@/data/teams';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
@@ -16,7 +16,7 @@ export default function StandingsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <PageTracker event="standings_view" />
+      {/* <PageTracker event="standings_view" /> */}
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">📊 小组积分榜</h1>
@@ -106,13 +106,13 @@ export default function StandingsPage() {
                             </span>
                           </td>
                           <td className="py-3">
-                            <Link href={`/team/${teamId}`} className="flex items-center gap-2 hover:text-gold-dark transition-colors">
+                            <a href={`/team/${teamId}`} className="flex items-center gap-2 hover:text-gold-dark transition-colors">
                               <span className="text-lg">{team?.flag || ''}</span>
                               <div>
                                 <div className="font-semibold text-gray-900 text-sm">{team?.name || row.team.shortName}</div>
                                 <div className="text-[10px] text-gray-400">{team?.nameEn || row.team.name}</div>
                               </div>
-                            </Link>
+                            </a>
                           </td>
                           <td className="text-center py-3 text-gray-600 tabular-nums">{row.playedGames}</td>
                           <td className="text-center py-3 text-gray-600 tabular-nums">{row.won}</td>

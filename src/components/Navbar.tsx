@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import SearchBox from './SearchBox';
@@ -10,6 +9,7 @@ const navItems = [
   { href: '/schedule', label: '赛程' },
   { href: '/standings', label: '积分榜' },
   { href: '/bracket', label: '淘汰赛' },
+  { href: '/ai-lab', label: 'AI实验室' },
   { href: '/odds', label: '赔率' },
 ];
 
@@ -18,22 +18,22 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 bg-navy text-white shadow-lg shadow-black/20">
+    <nav className="sticky top-0 z-[9999] bg-navy text-white shadow-lg shadow-black/20">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-12">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 font-bold text-base shrink-0">
+          {/* Logo — use <a> for hard navigation to avoid RSC client-nav issues */}
+          <a href="/" className="flex items-center gap-2 font-bold text-base shrink-0">
             <span>🏆</span>
             <span className="hidden sm:inline text-sm tracking-wide">世界杯 2026</span>
             <span className="sm:hidden text-sm">WC 2026</span>
-          </Link>
+          </a>
 
-          {/* Desktop nav */}
+          {/* Desktop nav — use <a> instead of <Link> to force full page loads */}
           <div className="hidden md:flex items-center gap-0">
             {navItems.map(item => {
               const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
               return (
-                <Link
+                <a
                   key={item.href}
                   href={item.href}
                   className={`relative px-3 py-3 text-sm font-medium transition-colors ${
@@ -46,7 +46,7 @@ export default function Navbar() {
                   {isActive && (
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-gold rounded-full" />
                   )}
-                </Link>
+                </a>
               );
             })}
             {/* Search */}
@@ -74,13 +74,13 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu — use <a> for hard navigation */}
         {menuOpen && (
           <div className="md:hidden pb-3 border-t border-navy-light">
             {navItems.map(item => {
               const isActive = pathname === item.href;
               return (
-                <Link
+                <a
                   key={item.href}
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
@@ -91,7 +91,7 @@ export default function Navbar() {
                   }`}
                 >
                   {item.label}
-                </Link>
+                </a>
               );
             })}
           </div>

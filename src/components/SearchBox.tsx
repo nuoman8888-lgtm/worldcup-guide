@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { getAllTeams, getTeam as getTeamById } from '@/data/teams';
 import { getMatchesByTeam } from '@/data/matches';
 import { searchPlayers } from '@/data/players';
@@ -174,7 +173,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                       const team = getTeamById(p.teamId);
                       const posColors: Record<string, string> = { FW: 'text-red-600 bg-red-50', MF: 'text-blue-600 bg-blue-50', DF: 'text-green-600 bg-green-50', GK: 'text-yellow-600 bg-yellow-50' };
                       return (
-                        <Link
+                        <a
                           key={p.id}
                           href={`/player/${p.id}`}
                           onClick={() => { setOpen(false); setQuery(''); }}
@@ -195,7 +194,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                             </div>
                           </div>
                           <span className="text-xs text-gray-400">→</span>
-                        </Link>
+                        </a>
                       );
                     })}
                   </>
@@ -214,7 +213,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                         .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0];
 
                       return (
-                        <Link
+                        <a
                           key={team.id}
                           href={`/team/${team.id}`}
                           onClick={() => { setOpen(false); setQuery(''); }}
@@ -238,7 +237,7 @@ export default function SearchBox({ variant = 'hero' }: SearchBoxProps) {
                             )}
                           </div>
                           <span className="text-gray-300 text-sm shrink-0">→</span>
-                        </Link>
+                        </a>
                       );
                     })}
                   </>

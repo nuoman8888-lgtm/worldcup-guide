@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+// import Link from 'next/link';
 import { decodeShareData, extractResults } from '@/lib/share-utils';
 import type { ShareResults } from '@/lib/share-utils';
 
@@ -63,9 +63,9 @@ export default function SharePage() {
           <div className="text-5xl mb-4">🔗</div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">无法加载预测</h1>
           <p className="text-gray-500 text-sm">{error}</p>
-          <Link href="/bracket" className="inline-block mt-6 px-6 py-3 bg-navy text-white rounded-xl text-sm font-bold hover:bg-navy-light transition-colors">
+          <a href="/bracket" className="inline-block mt-6 px-6 py-3 bg-navy text-white rounded-xl text-sm font-bold hover:bg-navy-light transition-colors">
             去预测淘汰赛 →
-          </Link>
+          </a>
         </div>
       </div>
     );
@@ -196,12 +196,12 @@ export default function SharePage() {
           >
             {copied ? '✅ 已复制' : '📋 复制链接'}
           </button>
-          <Link
+          <a
             href="/bracket"
             className="px-6 py-3 bg-white text-navy rounded-xl text-sm font-bold border-2 border-navy/15 hover:bg-navy/5 transition-colors text-center"
           >
             🏆 我也来预测 →
-          </Link>
+          </a>
         </div>
 
         <p className="text-center text-xs text-gray-400 pb-4">

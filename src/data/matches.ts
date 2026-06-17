@@ -243,31 +243,50 @@ export function formatDate(dateStr: string): string {
   return `${date.getMonth()+1}月${date.getDate()}日 ${days[date.getDay()]}`;
 }
 
+/** Real completed match results — authoritative data source */
+export const COMPLETED_MATCHES: Record<string, { homeScore: number; awayScore: number }> = {
+  m1:  { homeScore: 2, awayScore: 0 },  // 墨西哥 2-0 南非
+  m2:  { homeScore: 2, awayScore: 1 },  // 韩国 2-1 捷克
+  m3:  { homeScore: 1, awayScore: 1 },  // 加拿大 1-1 波黑
+  m4:  { homeScore: 4, awayScore: 1 },  // 美国 4-1 巴拉圭
+  m5:  { homeScore: 1, awayScore: 1 },  // 卡塔尔 1-1 瑞士
+  m6:  { homeScore: 1, awayScore: 1 },  // 巴西 1-1 摩洛哥
+  m7:  { homeScore: 0, awayScore: 1 },  // 海地 0-1 苏格兰
+  m8:  { homeScore: 2, awayScore: 0 },  // 澳大利亚 2-0 土耳其
+  m9:  { homeScore: 7, awayScore: 1 },  // 德国 7-1 库拉索
+  m10: { homeScore: 2, awayScore: 2 },  // 荷兰 2-2 日本
+  m11: { homeScore: 1, awayScore: 0 },  // 科特迪瓦 1-0 厄瓜多尔
+  m12: { homeScore: 5, awayScore: 1 },  // 瑞典 5-1 突尼斯
+  m13: { homeScore: 0, awayScore: 0 },  // 西班牙 0-0 佛得角
+  m14: { homeScore: 1, awayScore: 1 },  // 比利时 1-1 埃及
+  m15: { homeScore: 1, awayScore: 1 },  // 沙特 1-1 乌拉圭
+  m16: { homeScore: 2, awayScore: 2 },  // 伊朗 2-2 新西兰
+};
+
 /**
- * Simulate finished matches for demo/testing.
- * Marks matches before today as finished with realistic scores.
- * Uses deterministic seeding based on match ID to ensure consistent results.
+ * Apply real completed match results.
+ * Priority: COMPLETED_MATCHES (real data) > simulated (deterministic fallback).
  */
-export function applySimulatedResults(): void {
-  const today = getBeijingToday();
-
-  // Simple deterministic scorer based on team ELO
-  const seedFromId = (id: string): number => {
-    let h = 0;
-    for (let i = 0; i < id.length; i++) h = ((h << 5) - h) + id.charCodeAt(i);
-    return Math.abs(h);
-  };
-
-  allMatches.forEach(m => {
-    // Mark past group-stage matches as finished with scores
-    if (m.date < today && m.stage === 'group' && m.status === 'upcoming') {
+export function applyCompletedResults(): void {
+  for (const [id, score] of Object.entries(COMPLETED_MATCHES)) {
+    const m = allMatches.find(x => x.id === id);
+    if (m) {
       m.status = 'finished';
-      // Generate realistic scores based on match ID (deterministic)
-      const seed = seedFromId(m.id);
-      const homeBase = 1 + (seed % 3);     // 1-3 goals
-      const awayBase = ((seed >> 4) % 3);  // 0-2 goals
-      m.homeScore = homeBase;
-      m.awayScore = awayBase;
+      m.homeScore = score.homeScore;
+      m.awayScore = score.awayScore;
     }
-  });
+  }
+}
+
+/** Expert predictions for upcoming matches */
+export const EXPERT_PREDICTIONS: Record<string, string> = {
+  m9:  '4-0',   // 德国 vs 库拉索
+  m10: '2-1',   // 荷兰 vs 日本
+  m11: '1-1',   // 科特迪瓦 vs 厄瓜多尔
+  m12: '1-0',   // 瑞典 vs 突尼斯
+};
+
+/** Get expert prediction for a match, or null if not available */
+export function getExpertPrediction(matchId: string): string | null {
+  return EXPERT_PREDICTIONS[matchId] || null;
 }

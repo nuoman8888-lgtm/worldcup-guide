@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+// import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getTeam, getTeamsByGroup, teams } from '@/data/teams';
 import { getMatchesByTeam } from '@/data/matches';
@@ -9,7 +9,7 @@ import { getChampionOdds } from '@/data/odds';
 import { searchPlayers } from '@/data/players';
 import RadarChart from '@/components/RadarChart';
 import TeamStories from '@/components/TeamStories';
-import PageTracker from '@/components/PageTracker';
+// import PageTracker from '@/components/PageTracker';
 import storiesData from '@/data/team-stories.json';
 import type { Team } from '@/data/teams';
 
@@ -111,7 +111,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="min-h-screen">
-      <PageTracker event="team_page_view" data={{ team: team.id }} />
+      {/* <PageTracker event="team_page_view" data={{ team: team.id }} /> */}
       {/* ═══════ Hero — flag-based gradient ═══════ */}
       <section className={`bg-gradient-to-br ${heroColor} ${lightText ? 'text-gray-900' : 'text-white'}`}>
         <div className="max-w-6xl mx-auto px-4 py-10 md:py-14">
@@ -268,7 +268,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                     const isFinished = m.status === 'finished';
                     const isLive = m.status === 'live';
                     return (
-                      <Link
+                      <a
                         key={m.id}
                         href={`/match/${m.id}`}
                         className={`flex items-center gap-3 rounded-lg border p-3 transition-all group card-elevated ${
@@ -308,7 +308,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                           <div className="text-[10px] text-gray-400 shrink-0 hidden sm:block">{m.city}</div>
                         )}
                         <span className="text-gray-300 group-hover:text-gold transition-colors shrink-0">→</span>
-                      </Link>
+                      </a>
                     );
                   })}
                 </div>
@@ -400,13 +400,13 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                   );
 
                   return player ? (
-                    <Link
+                    <a
                       key={name}
                       href={`/player/${player.id}`}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
                     >
                       {cardBody}
-                    </Link>
+                    </a>
                   ) : (
                     <div key={name} className="flex items-center gap-3 p-3 rounded-lg">
                       {cardBody}
@@ -422,7 +422,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
             <h2 className="text-lg font-bold text-gray-900 mb-4">👥 {team.group}组对手</h2>
             <div className="grid grid-cols-3 gap-3">
               {groupTeams.filter(t => t.id !== team.id).map(t => (
-                <Link
+                <a
                   key={t.id}
                   href={`/team/${t.id}`}
                   className="bg-white rounded-xl border border-gray-100 p-4 text-center hover:shadow-md hover:border-navy-600 transition-all group card-elevated"
@@ -431,7 +431,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                   <div className="font-semibold text-gray-900 text-xs">{t.name}</div>
                   <div className="text-[10px] text-gray-400">{t.nameEn}</div>
                   <div className="text-[10px] text-gray-500 mt-1">FIFA #{t.fifaRank}</div>
-                </Link>
+                </a>
               ))}
             </div>
           </div>

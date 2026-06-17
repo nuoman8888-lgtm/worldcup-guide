@@ -5,7 +5,7 @@ import { getTeam } from '@/data/teams';
 import { getMatchesByTeam } from '@/data/matches';
 import { getChampionshipProbabilities } from '@/data/standings';
 import CountryCodeBadge from './CountryCodeBadge';
-import Link from 'next/link';
+// import Link from 'next/link';
 
 export function MyTeamWidget() {
   const { teamId, mounted } = useMyTeam();
@@ -43,12 +43,12 @@ export function MyTeamWidget() {
             <div className="text-[10px] text-gray-400">{team.group}组 · FIFA #{team.fifaRank}</div>
           </div>
         </div>
-        <Link
+        <a
           href={`/team/${team.id}`}
           className="text-xs text-gold hover:underline"
         >
           详情 →
-        </Link>
+        </a>
       </div>
 
       {/* Stats grid */}
@@ -57,14 +57,14 @@ export function MyTeamWidget() {
         <div className="p-3 text-center">
           <div className="text-[10px] text-gray-400 mb-1">下一场</div>
           {nextMatch ? (
-            <Link href={`/match/${nextMatch.id}`} className="block hover:text-gold-dark transition-colors">
+            <a href={`/match/${nextMatch.id}`} className="block hover:text-gold-dark transition-colors">
               <div className="text-xs font-bold text-gray-900">
                 {nextMatch.date.slice(5)} {nextMatch.time}
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">
                 vs {opponent?.name || 'TBD'}
               </div>
-            </Link>
+            </a>
           ) : (
             <span className="text-xs text-gray-400">暂无</span>
           )}

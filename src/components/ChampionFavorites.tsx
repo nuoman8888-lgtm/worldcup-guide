@@ -1,4 +1,4 @@
-import Link from 'next/link';
+// import Link from 'next/link';
 import { getTeam } from '@/data/teams';
 import CountryCodeBadge from './CountryCodeBadge';
 import type { WinnerOdd } from '@/data/odds';
@@ -38,7 +38,7 @@ export function ChampionFavorites({ teams }: ChampionFavoritesProps) {
           const barWidth = Math.max(4, (prob / maxProb) * 100);
 
           return (
-            <Link
+            <a
               key={item.teamId}
               href={`/team/${item.teamId}`}
               className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
@@ -78,7 +78,7 @@ export function ChampionFavorites({ teams }: ChampionFavoritesProps) {
                 {item.odds['Bet365']}
               </span>
               <span className="text-gray-300 text-xs group-hover:text-gold transition-colors shrink-0">→</span>
-            </Link>
+            </a>
           );
         })}
       </div>

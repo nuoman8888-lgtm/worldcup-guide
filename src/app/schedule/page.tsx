@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
-import PageTracker from '@/components/PageTracker';
+// import Link from 'next/link';
+// import PageTracker from '@/components/PageTracker';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
 import { getTeam } from '@/data/teams';
 import { tlaToTeamId } from '@/lib/use-api-data';
@@ -94,7 +94,7 @@ export default function SchedulePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <PageTracker event="schedule_view" />
+      {/* <PageTracker event="schedule_view" /> */}
       <h1 className="text-2xl font-bold text-gray-900 mb-1">📅 完整赛程</h1>
       <p className="text-gray-500 text-sm mb-4">104场 · 72小组+32淘汰</p>
 
@@ -149,7 +149,7 @@ export default function SchedulePage() {
                   const bj = beijing(m.utcDate);
                   const mid = `m${(raw||[]).findIndex((x:any)=>x.id===m.id)+1}`;
                   return (
-                    <Link key={m.id} href={`/match/${mid || `m${m.id%100}`}`}
+                    <a key={m.id} href={`/match/${mid || `m${m.id%100}`}`}
                       className={`block rounded-lg border p-3 transition-all ${live?'border-green-300 bg-green-50/50':done?'border-gray-100 bg-gray-50/60':'border-gray-100 bg-white hover:shadow hover:border-navy-600'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex gap-1.5">
@@ -173,7 +173,7 @@ export default function SchedulePage() {
                           <span className="font-semibold text-gray-900 text-xs text-center truncate w-full mt-0.5">{at?.name || m.awayTeam?.shortName || 'TBD'}</span>
                         </div>
                       </div>
-                    </Link>
+                    </a>
                   );
                 })}
               </div>

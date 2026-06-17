@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+// import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPlayer, getPlayersByTeam, getPlayerRadarData, topPlayers } from '@/data/players';
 import { getTeam } from '@/data/teams';
 import RadarChart from '@/components/RadarChart';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import PageTracker from '@/components/PageTracker';
+// import PageTracker from '@/components/PageTracker';
 
 // ── Position colors ──
 const posColors: Record<string, string> = {
@@ -57,7 +57,7 @@ export default async function PlayerPage({
 
   return (
     <div className="min-h-screen">
-      <PageTracker event="player_view" data={{ player: player.id, team: player.teamId }} />
+      {/* <PageTracker event="player_view" data={{ player: player.id, team: player.teamId }} /> */}
       {/* ═══════ Hero ═══════ */}
       <section className={`bg-gradient-to-br ${gradient} text-white`}>
         <div className="max-w-4xl mx-auto px-4 py-10 md:py-14">
@@ -74,12 +74,12 @@ export default async function PlayerPage({
                   {player.position}
                 </span>
                 {team && (
-                  <Link
+                  <a
                     href={`/team/${team.id}`}
                     className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-white/15 backdrop-blur hover:bg-white/25 transition-colors"
                   >
                     {team.flag} {team.name}
-                  </Link>
+                  </a>
                 )}
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-white/15 backdrop-blur">
                   {player.club}
@@ -148,7 +148,7 @@ export default async function PlayerPage({
 
             {/* National team card */}
             {team && (
-              <Link
+              <a
                 href={`/team/${team.id}`}
                 className="block bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-navy-600 transition-all group"
               >
@@ -162,7 +162,7 @@ export default async function PlayerPage({
                   </div>
                   <span className="ml-auto text-gray-300 group-hover:text-gold transition-colors">→</span>
                 </div>
-              </Link>
+              </a>
             )}
           </div>
         </div>
@@ -175,7 +175,7 @@ export default async function PlayerPage({
             </h2>
             <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
               {teammates.map(p => (
-                <Link
+                <a
                   key={p.id}
                   href={`/player/${p.id}`}
                   className="shrink-0 bg-white rounded-xl border border-gray-100 p-4 text-center hover:shadow-md hover:border-navy-600 transition-all group w-32"
@@ -186,7 +186,7 @@ export default async function PlayerPage({
                   <div className="font-semibold text-gray-900 text-xs">{p.name}</div>
                   <div className="text-[10px] text-gray-400">{p.position} · {p.age}岁</div>
                   <div className="text-[10px] text-gold-dark mt-0.5 font-medium">{p.marketValue}</div>
-                </Link>
+                </a>
               ))}
             </div>
           </div>

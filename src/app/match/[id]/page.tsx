@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getMatch, stageNames, formatDate, allMatches } from '@/data/matches';
 import { getTeam } from '@/data/teams';
-import PageTracker from '@/components/PageTracker';
+// import PageTracker from '@/components/PageTracker';
 import MatchClient from './MatchClient';
 
 export function generateStaticParams() {
@@ -28,7 +28,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <PageTracker event="match_view" data={{ matchId: id }} />
+      {/* <PageTracker event="match_view" data={{ matchId: id }} /> */}
       <MatchClient id={id} />
     </>
   );

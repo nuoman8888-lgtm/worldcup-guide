@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { getChampionOdds } from '@/data/odds';
 import { getTeam } from '@/data/teams';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
-import PageTracker from '@/components/PageTracker';
-import Link from 'next/link';
+// import PageTracker from '@/components/PageTracker';
+// import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: '夺冠赔率分析 | 世界杯 2026',
@@ -16,7 +16,7 @@ export default function OddsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <PageTracker event="odds_view" />
+      {/* <PageTracker event="odds_view" /> */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">💰 赔率分析</h1>
         <p className="text-gray-500 text-sm">
@@ -58,13 +58,13 @@ export default function OddsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <Link href={`/team/${team.id}`} className="flex items-center gap-2 hover:text-gold-dark transition-colors">
+                      <a href={`/team/${team.id}`} className="flex items-center gap-2 hover:text-gold-dark transition-colors">
                         <CountryCodeBadge teamId={item.teamId} />
                         <div>
                           <div className="font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-none">{team.name}</div>
                           <div className="text-xs text-gray-400">{team.nameEn}</div>
                         </div>
-                      </Link>
+                      </a>
                     </td>
                     <td className="text-center px-4 py-4 text-gray-600">{team.fifaRank}</td>
                     {bookmakers.map(bm => (
@@ -203,7 +203,7 @@ export default function OddsPage() {
               if (!team) return null;
               const implied = Math.round(100 / item.odds['Bet365']);
               return (
-                <Link
+                <a
                   key={item.teamId}
                   href={`/team/${team.id}`}
                   className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0 hover:text-gold-dark transition-colors"
@@ -219,7 +219,7 @@ export default function OddsPage() {
                     <span className="font-mono font-bold">{item.odds['Bet365']}</span>
                     <span className="text-xs text-gray-400 ml-1">(~{implied}%)</span>
                   </div>
-                </Link>
+                </a>
               );
             })}
           </div>
