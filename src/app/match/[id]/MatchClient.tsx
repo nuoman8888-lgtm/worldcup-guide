@@ -77,8 +77,25 @@ export default function MatchClient({ id }: { id: string }) {
       .then(json => {
         if (cancelled || !json?.matches) return;
         const sorted = [...json.matches].sort((a:any,b:any) => a.utcDate.localeCompare(b.utcDate)||a.id-b.id);
-        const idx = parseInt(id.replace('m',''),10)-1;
-        if (idx>=0 && idx<sorted.length) setApiData(sorted[idx] as ApiMatch);
+
+        // Find API match by internal match team matchup (most reliable)
+        const staticM = getMatch(id);
+        let found: any = null;
+        if (staticM && staticM.homeTeamId !== 'TBD' && staticM.awayTeamId !== 'TBD') {
+          found = sorted.find((m: any) => {
+            const hi = tlaToTeamId(m.homeTeam?.tla || '');
+            const ai = tlaToTeamId(m.awayTeam?.tla || '');
+            return hi === staticM.homeTeamId && ai === staticM.awayTeamId;
+          });
+        }
+
+        // Fallback: position-based
+        if (!found) {
+          const idx = parseInt(id.replace('m',''),10)-1;
+          if (idx>=0 && idx<sorted.length) found = sorted[idx];
+        }
+
+        if (found) setApiData(found as ApiMatch);
       })
       .catch(()=>{})
       .finally(() => { if (!cancelled) setApiLoading(false); });
@@ -95,7 +112,7 @@ export default function MatchClient({ id }: { id: string }) {
   const isLive = apiData?.status === 'IN_PLAY' || apiData?.status === 'LIVE';
   const score = apiData?.score;
 
-  const ai = getPredictions(id);
+  const ai = getPredictions(id, { homeTeamId, awayTeamId });
   const h2h = homeTeam && awayTeam ? generateH2H(homeTeam, awayTeam) : [];
   const odds = homeTeam && awayTeam ? calcOdds(homeTeam, awayTeam) : null;
 

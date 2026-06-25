@@ -9,11 +9,14 @@ import {
   getModelDetail,
   getRecentLabResults,
   seedHistoricalData,
+  syncLabPredictions,
   type LeaderboardEntry,
   type ModelStats,
   type StoredPrediction,
 } from '@/data/ai-leaderboard';
+import { getPredictions } from '@/data/predictions';
 import { getTeam } from '@/data/teams';
+import { tlaToTeamId } from '@/lib/use-api-data';
 
 /* ── Helpers ── */
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉', 4: '4️⃣' };
@@ -193,9 +196,62 @@ export default function AiLabPage() {
 
   useEffect(() => {
     seedHistoricalData();
-    setMounted(true);
-    setLeaderboard(getLeaderboard());
-    setAllResults(getRecentLabResults(200));
+
+    // Fetch API matches and sync results — same as homepage does
+    fetch('/api/matches')
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (!json?.matches) return;
+        const apiMatches = json.matches as any[];
+
+        // Record predictions for all matches (upcoming + finished)
+        const newPreds: Array<{
+          matchId: string; homeTeam: string; awayTeam: string;
+          date?: string; time?: string;
+          predictions: Record<ModelId, { predictedScore: string; winner: string }>;
+        }> = [];
+
+        for (const m of apiMatches) {
+          const hi = tlaToTeamId(m.homeTeam?.tla || ''), ai = tlaToTeamId(m.awayTeam?.tla || '');
+          const h = getTeam(hi), a = getTeam(ai);
+          if (!h || !a) continue;
+          const predSet = getPredictions(String(m.id), { homeTeamId: h.id, awayTeamId: a.id });
+          if (!predSet) continue;
+
+          const bjDate = (() => {
+            const d = new Date(m.utcDate);
+            const b = new Date(d.getTime() + 8 * 3600000);
+            return {
+              date: `${b.getUTCFullYear()}-${String(b.getUTCMonth()+1).padStart(2,'0')}-${String(b.getUTCDate()).padStart(2,'0')}`,
+              time: `${String(b.getUTCHours()).padStart(2,'0')}:${String(b.getUTCMinutes()).padStart(2,'0')}`,
+            };
+          })();
+
+          const entry = {
+            matchId: String(m.id),
+            homeTeam: h.name,
+            awayTeam: a.name,
+            date: bjDate.date,
+            time: bjDate.time,
+            predictions: {} as Record<ModelId, { predictedScore: string; winner: string }>,
+          };
+          for (const mid of MODEL_ORDER) {
+            entry.predictions[mid] = {
+              predictedScore: predSet.predictions[mid].predictedScore,
+              winner: predSet.predictions[mid].winner,
+            };
+          }
+          newPreds.push(entry);
+        }
+
+        syncLabPredictions(apiMatches, newPreds);
+      })
+      .catch(() => {})
+      .finally(() => {
+        setMounted(true);
+        setLeaderboard(getLeaderboard());
+        setAllResults(getRecentLabResults(200));
+      });
   }, []);
 
   useEffect(() => {
@@ -402,51 +458,51 @@ export default function AiLabPage() {
             </div>
           </div>
 
-          <div className="backdrop-blur-sm rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)' }}>
+          <div className="backdrop-blur-sm rounded-xl border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <RecentResultsTable
               results={recentResults}
               selectedModel={selectedModel}
             />
-          </div>
 
-          {/* Pagination */}
-          {mounted && allResults.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-              <span className="text-xs text-white/30">
-                共 {allResults.length} 场比赛 · 第 {page + 1}/{totalPages} 页
-              </span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setPage(0)}
-                  disabled={page === 0}
-                  className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                >
-                  ««
-                </button>
-                <button
-                  onClick={() => setPage(p => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                >
-                  « 上一页
-                </button>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                >
-                  下一页 »
-                </button>
-                <button
-                  onClick={() => setPage(totalPages - 1)}
-                  disabled={page >= totalPages - 1}
-                  className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                >
-                  »»
-                </button>
+            {/* Pagination — inside the table container for visual cohesion */}
+            {mounted && allResults.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
+                <span className="text-xs text-white/30">
+                  共 {allResults.length} 场比赛 · 第 {page + 1}/{totalPages} 页
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setPage(0)}
+                    disabled={page === 0}
+                    className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ««
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  >
+                    « 上一页
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  >
+                    下一页 »
+                  </button>
+                  <button
+                    onClick={() => setPage(totalPages - 1)}
+                    disabled={page >= totalPages - 1}
+                    className="text-[10px] px-2 py-1 rounded text-white/40 hover:text-white/80 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  >
+                    »»
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {mounted && allResults.length === 0 && (
             <div className="text-center py-12 text-white/20 text-sm">

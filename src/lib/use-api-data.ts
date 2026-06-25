@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { allMatches } from '@/data/matches';
 
 // ── Types from football-data.org ──
 
@@ -127,13 +128,22 @@ export function normalizeGroup(raw: string | null): string {
 
 /**
  * Map an API match to our internal match ID (m1-m104).
- * First tries exact TLA+TLA match, then falls back to position-based lookup.
+ * Uses team TLA codes to find the correct internal match by team matchup,
+ * falling back to position-based lookup for TBD/unmatched teams.
  */
 export function apiMatchToInternalId(apiMatch: ApiMatch, allApiMatches: ApiMatch[]): string {
-  // Match by home/away TLA in the sorted API match list
+  // Primary: match by home/away TLA → internal team IDs → find internal match ID
+  const homeId = tlaToTeamId(apiMatch.homeTeam?.tla || '');
+  const awayId = tlaToTeamId(apiMatch.awayTeam?.tla || '');
+  if (homeId && awayId && homeId !== 'tbd' && awayId !== 'tbd') {
+    const found = allMatches.find(m => m.homeTeamId === homeId && m.awayTeamId === awayId);
+    if (found) return found.id;
+  }
+
+  // Fallback: position-based by API match ID
   const idx = allApiMatches.findIndex(m => m.id === apiMatch.id);
   if (idx >= 0 && idx < 104) return `m${idx + 1}`;
-  return `m${(apiMatch.id % 1000)}`; // fallback
+  return `m${(apiMatch.id % 1000)}`;
 }
 
 export type MatchStatus = 'SCHEDULED' | 'TIMED' | 'LIVE' | 'IN_PLAY' | 'PAUSED' | 'FINISHED';

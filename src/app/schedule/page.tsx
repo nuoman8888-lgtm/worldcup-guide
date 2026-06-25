@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 // import PageTracker from '@/components/PageTracker';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
 import { getTeam } from '@/data/teams';
-import { tlaToTeamId } from '@/lib/use-api-data';
+import { tlaToTeamId, apiMatchToInternalId } from '@/lib/use-api-data';
 
 /* ── Stage map ── */
 const STAGE_LABEL: Record<string, string> = {
@@ -147,7 +147,7 @@ export default function SchedulePage() {
                   const done = m.status === 'FINISHED';
                   const live = m.status === 'IN_PLAY' || m.status === 'LIVE';
                   const bj = beijing(m.utcDate);
-                  const mid = `m${(raw||[]).findIndex((x:any)=>x.id===m.id)+1}`;
+                  const mid = apiMatchToInternalId(m, raw || []);
                   return (
                     <a key={m.id} href={`/match/${mid || `m${m.id%100}`}`}
                       className={`block rounded-lg border p-3 transition-all ${live?'border-green-300 bg-green-50/50':done?'border-gray-100 bg-gray-50/60':'border-gray-100 bg-white hover:shadow hover:border-navy-600'}`}>

@@ -111,12 +111,13 @@ export function getPredictions(
   let homeTeamId: string;
   let awayTeamId: string;
 
-  if (match) {
-    homeTeamId = match.homeTeamId;
-    awayTeamId = match.awayTeamId;
-  } else if (opts?.homeTeamId && opts?.awayTeamId) {
+  // Prefer explicit opts (from caller context) over match ID lookup
+  if (opts?.homeTeamId && opts?.awayTeamId) {
     homeTeamId = opts.homeTeamId;
     awayTeamId = opts.awayTeamId;
+  } else if (match) {
+    homeTeamId = match.homeTeamId;
+    awayTeamId = match.awayTeamId;
   } else {
     return null;
   }

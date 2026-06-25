@@ -144,6 +144,17 @@ export default function HomePage() {
 
   const midIdx = (id: number | string) => {
     if (typeof id === 'string') return id;
+    // Primary: match by team TLA → internal match ID
+    const apiMatch = all.find((x: any) => x.id === id);
+    if (apiMatch) {
+      const hi = ti(apiMatch.homeTeam?.tla), ai = ti(apiMatch.awayTeam?.tla);
+      const h = getTeam(hi), a = getTeam(ai);
+      if (h && a) {
+        const match = staticMatches.find(m => m.homeTeamId === h.id && m.awayTeamId === a.id);
+        if (match) return match.id;
+      }
+    }
+    // Fallback: position-based
     const i = all.findIndex((x: any) => x.id === id);
     return i >= 0 ? `m${i + 1}` : `m${id % 100}`;
   };
@@ -311,7 +322,7 @@ export default function HomePage() {
       {(() => {
         const tomorrow = all.filter((m: any) => {
           const d = bj(m.utcDate).date;
-          return d > today && getExpertPrediction(String(m.id));
+          return d > today && getExpertPrediction(midIdx(m.id));
         }).slice(0, 4);
         if (tomorrow.length === 0) return null;
         return (
@@ -324,7 +335,7 @@ export default function HomePage() {
               {tomorrow.map((m: any) => {
                 const hi = ti(m.homeTeam?.tla), ai = ti(m.awayTeam?.tla);
                 const h = getTeam(hi), a = getTeam(ai);
-                const pred = getExpertPrediction(String(m.id));
+                const pred = getExpertPrediction(midIdx(m.id));
                 return (
                   <div key={m.id} className="bg-white/[0.04] backdrop-blur-sm rounded-xl border border-white/[0.08] p-3 text-center">
                     <div className="text-[10px] text-white/30 mb-2">{bj(m.utcDate).time}</div>
