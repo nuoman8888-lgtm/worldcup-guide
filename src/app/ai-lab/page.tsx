@@ -282,7 +282,7 @@ export default function AiLabPage() {
         <section className="mb-6">
           <h2 className="text-sm font-bold text-white mb-3">🏆 AI排行榜</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {mounted && leaderboard.map((entry) => (
+            {leaderboard.map((entry) => (
               <button
                 key={entry.modelId}
                 onClick={() => setSelectedModel(selectedModel === entry.modelId ? 'all' : entry.modelId)}
@@ -338,8 +338,10 @@ export default function AiLabPage() {
                 </div>
               </button>
             ))}
-            {!mounted && (
-              <div className="col-span-full text-center py-12 text-white/15 text-sm">加载中...</div>
+            {leaderboard.length === 0 && (
+              <div className="col-span-full text-center py-12 text-white/15 text-sm">
+                🤖 比赛开始后<br />AI模型将自动预测并排名
+              </div>
             )}
           </div>
         </section>

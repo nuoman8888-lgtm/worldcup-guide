@@ -101,7 +101,7 @@ export function useApiStandings() {
 }
 
 /** Map football-data.org TLA to our team ID */
-const TLA_MAP: Record<string, string> = {
+export const TLA_MAP: Record<string, string> = {
   MEX:'mexico', KOR:'south-korea', CZE:'czech', RSA:'south-africa',
   CAN:'canada', QAT:'qatar', SUI:'switzerland', BIH:'bosnia',
   BRA:'brazil', HAI:'haiti', SCO:'scotland', MAR:'morocco',

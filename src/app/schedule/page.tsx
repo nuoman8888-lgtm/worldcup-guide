@@ -5,7 +5,8 @@ import { useState, useEffect, useMemo } from 'react';
 // import PageTracker from '@/components/PageTracker';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
 import { getTeam } from '@/data/teams';
-import { tlaToTeamId, apiMatchToInternalId } from '@/lib/use-api-data';
+import { allMatches as staticMatches } from '@/data/matches';
+import { tlaToTeamId, apiMatchToInternalId, TLA_MAP } from '@/lib/use-api-data';
 
 /* ── Stage map ── */
 const STAGE_LABEL: Record<string, string> = {
@@ -35,17 +36,44 @@ const FILTERS = [
   { v:'THIRD_PLACE', l:'三四名' }, { v:'FINAL', l:'决赛' },
 ];
 
+/* ── Static fallback helper ── */
+function mapStaticMatches() {
+  return staticMatches.map((m: any) => ({
+    id: m.id,
+    utcDate: `${m.date}T${m.time}:00+08:00`,
+    status: m.status === 'finished' ? 'FINISHED' : 'SCHEDULED',
+    matchday: 1,
+    stage: m.stage === 'group' ? 'GROUP_STAGE' : m.stage?.toUpperCase(),
+    group: m.group ? `GROUP_${m.group}` : null,
+    homeTeam: {
+      tla: Object.entries(TLA_MAP).find(([, v]) => v === m.homeTeamId)?.[0] || m.homeTeamId?.toUpperCase() || 'TBD',
+      shortName: m.homeTeamId,
+      name: m.homeTeamId,
+    },
+    awayTeam: {
+      tla: Object.entries(TLA_MAP).find(([, v]) => v === m.awayTeamId)?.[0] || m.awayTeamId?.toUpperCase() || 'TBD',
+      shortName: m.awayTeamId,
+      name: m.awayTeamId,
+    },
+    score: {
+      fullTime: {
+        home: m.homeScore ?? null,
+        away: m.awayScore ?? null,
+      },
+    },
+  }));
+}
+
 /* ── Page ── */
 export default function SchedulePage() {
-  const [raw, setRaw] = useState<any[] | null>(null);
+  const [raw, setRaw] = useState<any[] | null>(() => mapStaticMatches());
   const [stage, setStage] = useState('all');
   const [dFilter, setDFilter] = useState('all');
-  const [status, setStatus] = useState<'loading'|'error'|'ok'>('loading');
+  const [status, setStatus] = useState<'loading'|'error'|'ok'>('ok');
   const [errMsg, setErrMsg] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-    setStatus('loading');
     fetch('/api/matches')
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -54,18 +82,14 @@ export default function SchedulePage() {
       .then(json => {
         if (cancelled) return;
         const arr = json?.matches;
-        if (!arr || !Array.isArray(arr) || arr.length === 0) {
-          setStatus('error');
-          setErrMsg(`数据异常: matches=${typeof arr} len=${arr?.length ?? 'null'}`);
-          return;
+        if (arr && Array.isArray(arr) && arr.length > 0) {
+          setRaw(arr);
+          setStatus('ok');
         }
-        setRaw(arr);
-        setStatus('ok');
       })
-      .catch(e => {
-        if (cancelled) return;
-        setStatus('error');
-        setErrMsg(e.message || String(e));
+      .catch(() => {
+        // Keep static fallback data already in state
+        if (!cancelled) setStatus('ok');
       });
     return () => { cancelled = true; };
   }, []);

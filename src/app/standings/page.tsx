@@ -1,16 +1,66 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 // import Link from 'next/link';
 // import PageTracker from '@/components/PageTracker';
 import { useApiStandings, tlaToTeamId, normalizeGroup } from '@/lib/use-api-data';
-import { getTeam } from '@/data/teams';
+import { getTeam, groups as staticGroups } from '@/data/teams';
+import { allMatches } from '@/data/matches';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
+
+/** Generate static standings from completed match results */
+function generateStaticStandings(): Array<{
+  group: string; type: string;
+  table: Array<{ position: number; team: { id: number; name: string; shortName: string; tla: string }; playedGames: number; won: number; draw: number; lost: number; goalsFor: number; goalsAgainst: number; goalDifference: number; points: number }>;
+}> {
+  const result: any[] = [];
+  for (const g of staticGroups) {
+    const teamStats: Record<string, { played: number; won: number; draw: number; lost: number; gf: number; ga: number; pts: number }> = {};
+    // Initialize
+    for (const tid of g.teams) {
+      teamStats[tid] = { played: 0, won: 0, draw: 0, lost: 0, gf: 0, ga: 0, pts: 0 };
+    }
+    // Process completed matches
+    for (const m of allMatches) {
+      if (m.group !== g.name || m.status !== 'finished') continue;
+      if (m.homeScore == null || m.awayScore == null) continue;
+      const h = teamStats[m.homeTeamId], a = teamStats[m.awayTeamId];
+      if (!h || !a) continue;
+      h.played++; a.played++;
+      h.gf += m.homeScore; h.ga += m.awayScore;
+      a.gf += m.awayScore; a.ga += m.homeScore;
+      if (m.homeScore > m.awayScore) { h.won++; a.lost++; h.pts += 3; }
+      else if (m.homeScore < m.awayScore) { a.won++; h.lost++; a.pts += 3; }
+      else { h.draw++; a.draw++; h.pts += 1; a.pts += 1; }
+    }
+    // Build table
+    const table = Object.entries(teamStats)
+      .map(([tid, s]) => {
+        const t = getTeam(tid);
+        return {
+          position: 0,
+          team: { id: 0, name: t?.name || tid, shortName: t?.name || tid, tla: tid.toUpperCase() },
+          playedGames: s.played, won: s.won, draw: s.draw, lost: s.lost,
+          goalsFor: s.gf, goalsAgainst: s.ga, goalDifference: s.gf - s.ga, points: s.pts,
+        };
+      })
+      .sort((a, b) => b.points - a.points || (b.goalDifference - a.goalDifference) || (b.goalsFor - a.goalsFor));
+    table.forEach((row, i) => { row.position = i + 1; });
+    result.push({ group: `GROUP_${g.name}`, type: 'TOTAL', table });
+  }
+  return result;
+}
 
 export default function StandingsPage() {
   const { data, error, loading } = useApiStandings();
-  const groups = (data || []).filter(s => s.type === 'TOTAL' && s.group);
+  // Always show static data as baseline, API data overrides when available
+  const staticData = useMemo(() => generateStaticStandings(), []);
+  const effectiveData = data && data.length > 0 ? data : staticData;
+  const groups = (effectiveData || []).filter(s => s.type === 'TOTAL' && s.group);
   const [activeGroup, setActiveGroup] = useState('A');
+
+  const hasLiveData = data && data.length > 0;
+  const showLoading = loading && groups.length === 0;
 
   const currentGroup = groups.find(g => normalizeGroup(g.group || '') === activeGroup);
 
@@ -22,26 +72,27 @@ export default function StandingsPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">📊 小组积分榜</h1>
         <p className="text-gray-500 text-sm">
           12个小组 · 每组前2名直接晋级32强 · 8个最佳第3名晋级
-          {!loading && !error && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">实时数据</span>}
+          {hasLiveData && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">实时数据</span>}
+          {!hasLiveData && !loading && <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">静态数据</span>}
         </p>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-          <p className="text-red-600 font-medium text-sm">⚠️ 实时数据获取失败</p>
-          <p className="text-red-400 text-xs mt-1">{error}</p>
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+          <p className="text-yellow-600 font-medium text-sm">⚠️ 实时数据获取失败，显示已完赛数据</p>
+          <p className="text-yellow-400 text-xs mt-1">{error}</p>
         </div>
       )}
 
       {/* Loading */}
-      {loading && (
+      {showLoading && (
         <div className="flex justify-center py-20">
           <div className="animate-spin text-4xl">⚽</div>
         </div>
       )}
 
-      {!loading && !error && groups.length === 0 && (
+      {!showLoading && groups.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <div className="text-5xl mb-4">📭</div>
           <p className="font-bold text-gray-500">暂无积分榜数据</p>
@@ -49,7 +100,7 @@ export default function StandingsPage() {
         </div>
       )}
 
-      {!loading && groups.length > 0 && (
+      {!showLoading && groups.length > 0 && (
         <>
           {/* Group tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hide">

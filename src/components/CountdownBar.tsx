@@ -20,12 +20,10 @@ function bjTime(utc: string): string { const d = new Date(utc); if (isNaN(d.getT
  */
 export function CountdownBar({ apiMatches }: { apiMatches?: ApiMatch[] | null }) {
   const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0 });
-  const [nextMatchLabel, setNextMatchLabel] = useState('');
-  const [mounted, setMounted] = useState(false);
+  const [nextMatchLabel, setNextMatchLabel] = useState('FIFA World Cup 2026');
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const update = () => {
       const now = new Date();
       const today = getBeijingToday();
@@ -110,14 +108,12 @@ export function CountdownBar({ apiMatches }: { apiMatches?: ApiMatch[] | null })
 
       {/* Center: next match label (hidden on mobile) */}
       <div className="hidden md:block text-white/50 text-xs truncate mx-4 max-w-[180px] lg:max-w-xs">
-        {mounted && nextMatchLabel}
+        {nextMatchLabel}
       </div>
 
       {/* Right: countdown */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {!mounted ? (
-          <span className="text-white/30 text-xs">加载中...</span>
-        ) : isLive ? (
+        {isLive ? (
           <span className="inline-flex items-center gap-1.5 text-gold font-semibold text-xs animate-pulse">
             <span className="w-1.5 h-1.5 bg-gold rounded-full" />
             比赛进行中
