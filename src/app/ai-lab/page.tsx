@@ -189,7 +189,7 @@ export default function AiLabPage() {
   const [modelDetail, setModelDetail] = useState<ModelStats | null>(null);
   const [allResults, setAllResults] = useState<StoredPrediction[]>([]);
   const [mounted, setMounted] = useState(false);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 200;
   const [page, setPage] = useState(0);
 
   useEffect(() => {

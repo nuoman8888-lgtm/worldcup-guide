@@ -24,6 +24,7 @@ export interface StaticStandingGroup {
 export function generateStaticStandings(): StaticStandingGroup[] {
   applyCompletedResults(); // ensure match scores are applied before computing standings
   const result: StaticStandingGroup[] = [];
+  let teamIdCounter = 0;
   for (const g of staticGroups) {
     const teamStats: Record<string, { played: number; won: number; draw: number; lost: number; gf: number; ga: number; pts: number }> = {};
     for (const tid of g.teams) {
@@ -44,9 +45,10 @@ export function generateStaticStandings(): StaticStandingGroup[] {
     const table: StaticStandingRow[] = Object.entries(teamStats)
       .map(([tid, s]) => {
         const t = getTeam(tid);
+        teamIdCounter++;
         return {
           position: 0,
-          team: { id: 0, name: t?.name || tid, shortName: t?.name || tid, tla: tid.toUpperCase() },
+          team: { id: teamIdCounter, name: t?.name || tid, shortName: t?.name || tid, tla: tid.toUpperCase() },
           playedGames: s.played, won: s.won, draw: s.draw, lost: s.lost,
           goalsFor: s.gf, goalsAgainst: s.ga, goalDifference: s.gf - s.ga, points: s.pts,
         };
