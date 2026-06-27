@@ -49,7 +49,7 @@ export interface LeaderboardEntry {
    ═══════════════════════════════════════════════════════════ */
 
 const STORAGE_KEY = 'wc_ai_lab';
-const DATA_VERSION = 9; // fix: unified match ID resolution with apiMatchToInternalId
+const DATA_VERSION = 10; // fix: seed all 104 matches (not just completed 16)
 
 function load(): StoredPrediction[] {
   if (typeof window === 'undefined') return [];
@@ -316,26 +316,32 @@ export function seedHistoricalData(): void {
 
   applyCompletedResults();
 
-  for (const [matchId, score] of Object.entries(COMPLETED_MATCHES)) {
-    const match = allMatches.find(m => m.id === matchId);
-    if (!match) continue;
+  // Seed ALL matches (completed + upcoming) with predictions
+  for (const match of allMatches) {
+    if (match.homeTeamId === 'TBD' || match.awayTeamId === 'TBD') continue;
     const home = getTeam(match.homeTeamId);
     const away = getTeam(match.awayTeamId);
     if (!home || !away) continue;
 
-    const predSet = getPredictions(matchId);
+    const predSet = getPredictions(match.id);
     if (!predSet) continue;
 
     const entry: StoredPrediction = {
-      matchId, date: match.date, time: match.time,
+      matchId: match.id, date: match.date, time: match.time,
       homeTeam: home.name, awayTeam: away.name,
       predictions: {} as StoredPrediction['predictions'],
-      result: {
-        homeScore: score.homeScore, awayScore: score.awayScore,
-        actualWinner: score.homeScore > score.awayScore ? home.name
-          : score.awayScore > score.homeScore ? away.name : '平局',
-      },
     };
+
+    // Attach result for completed matches
+    const completedScore = COMPLETED_MATCHES[match.id];
+    if (completedScore) {
+      entry.result = {
+        homeScore: completedScore.homeScore, awayScore: completedScore.awayScore,
+        actualWinner: completedScore.homeScore > completedScore.awayScore ? home.name
+          : completedScore.awayScore > completedScore.homeScore ? away.name : '平局',
+      };
+    }
+
     for (const mid of MODEL_ORDER) {
       const p = predSet.predictions[mid];
       const [h, a] = p.predictedScore.split('-').map(Number);
@@ -349,4 +355,14 @@ export function seedHistoricalData(): void {
     all.push(entry);
   }
   save(all);
+}
+
+/** Get all stored predictions (including upcoming, not just judged) */
+export function getAllLabPredictions(): StoredPrediction[] {
+  return load()
+    .sort((a, b) => {
+      const da = a.date + 'T' + (a.time || '00:00') + ':00+08:00';
+      const db = b.date + 'T' + (b.time || '00:00') + ':00+08:00';
+      return new Date(da).getTime() - new Date(db).getTime();
+    });
 }

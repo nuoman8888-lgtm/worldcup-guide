@@ -10,6 +10,7 @@ import {
   getRecentLabResults,
   seedHistoricalData,
   syncLabPredictions,
+  getAllLabPredictions,
   type LeaderboardEntry,
   type ModelStats,
   type StoredPrediction,
@@ -85,9 +86,10 @@ function RecentResultsTable({ results, selectedModel }: { results: StoredPredict
         </thead>
         <tbody>
           {results.map(entry => {
-            const res = entry.result!;
+            const hasResult = !!entry.result;
+            const res = entry.result;
             return (
-              <tr key={entry.matchId} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
+              <tr key={entry.matchId} className={`border-b border-white/[0.02] ${hasResult ? 'hover:bg-white/[0.02]' : 'bg-white/[0.01]'}`}>
                 <td className="py-2.5 pl-4 text-white/40">{entry.date.slice(5)} {entry.time?.slice(0,5) || ''}</td>
                 <td className="py-2.5">
                   <span className="text-white/70">{entry.homeTeam}</span>
@@ -95,40 +97,40 @@ function RecentResultsTable({ results, selectedModel }: { results: StoredPredict
                   <span className="text-white/70">{entry.awayTeam}</span>
                 </td>
                 <td className="py-2.5 text-center">
-                  <span className="text-white font-bold font-mono">{res.homeScore}-{res.awayScore}</span>
+                  {hasResult ? (
+                    <span className="text-white font-bold font-mono">{res!.homeScore}-{res!.awayScore}</span>
+                  ) : (
+                    <span className="text-white/15 text-[10px]">待定</span>
+                  )}
                 </td>
                 {selectedModel === 'all' ? (
                   MODEL_ORDER.map(mid => {
                     const pred = entry.predictions[mid];
                     const scores = pred.predictedScore.split(' / ');
-                    const hasExact = scores.some(s => {
-                      const [h, a] = s.split('-').map(Number);
-                      return h === res.homeScore && a === res.awayScore;
-                    });
-                    const [ph, pa] = scores[0].split('-').map(Number);
-                    const predDir = !isNaN(ph) && !isNaN(pa) ? (ph > pa ? 'HOME' : pa > ph ? 'AWAY' : 'DRAW') : null;
-                    const actualDir = res.homeScore > res.awayScore ? 'HOME' : res.awayScore > res.homeScore ? 'AWAY' : 'DRAW';
-                    const hasCorrect = !hasExact && predDir === actualDir;
-                    const cellColor = hasExact ? '#22c55e' : hasCorrect ? '#facc15' : '#ef4444';
                     return (
                       <td key={mid} className="py-2.5 text-center">
                         <div className="font-mono text-[11px]">
                           {scores.map((s, i) => {
                             const [h, a] = s.split('-').map(Number);
-                            const hit = h === res.homeScore && a === res.awayScore;
+                            const hit = hasResult && h === res!.homeScore && a === res!.awayScore;
                             return (
                               <span key={i}>
                                 {i > 0 && <span className="text-white/20"> / </span>}
-                                <span style={{ color: hit ? '#22c55e' : '#6b7280', fontWeight: hit ? 'bold' : 'normal' }}>
+                                <span style={{ color: hit ? '#22c55e' : hasResult ? '#6b7280' : '#9ca3af', fontWeight: hit ? 'bold' : 'normal' }}>
                                   {s}
                                 </span>
                               </span>
                             );
                           })}
                         </div>
-                        <div className="text-[9px] mt-0.5 font-bold" style={{ color: cellColor }}>
-                          {hasExact ? '✓ 精准命中' : hasCorrect ? '✓ 方向正确' : '✗'}
-                        </div>
+                        {hasResult && (() => {
+                          const hasExact = scores.some(s => { const [h, a] = s.split('-').map(Number); return h === res!.homeScore && a === res!.awayScore; });
+                          const [ph, pa] = scores[0].split('-').map(Number);
+                          const predDir = !isNaN(ph) && !isNaN(pa) ? (ph > pa ? 'HOME' : pa > ph ? 'AWAY' : 'DRAW') : null;
+                          const actualDir = res!.homeScore > res!.awayScore ? 'HOME' : res!.awayScore > res!.homeScore ? 'AWAY' : 'DRAW';
+                          const hasCorrect = !hasExact && predDir === actualDir;
+                          return <div className="text-[9px] mt-0.5 font-bold" style={{ color: hasExact ? '#22c55e' : hasCorrect ? '#facc15' : '#ef4444' }}>{hasExact ? '✓' : hasCorrect ? '✓方向' : '✗'}</div>;
+                        })()}
                       </td>
                     );
                   })
@@ -142,11 +144,11 @@ function RecentResultsTable({ results, selectedModel }: { results: StoredPredict
                           <div className="font-mono text-[11px]">
                             {scores.map((s, i) => {
                               const [h, a] = s.split('-').map(Number);
-                              const hit = h === res.homeScore && a === res.awayScore;
+                              const hit = hasResult && h === res!.homeScore && a === res!.awayScore;
                               return (
                                 <span key={i}>
                                   {i > 0 && <span className="text-white/20"> / </span>}
-                                  <span style={{ color: hit ? '#22c55e' : '#6b7280', fontWeight: hit ? 'bold' : 'normal' }}>
+                                  <span style={{ color: hit ? '#22c55e' : hasResult ? '#6b7280' : '#9ca3af', fontWeight: hit ? 'bold' : 'normal' }}>
                                     {s}
                                   </span>
                                 </span>
@@ -157,22 +159,18 @@ function RecentResultsTable({ results, selectedModel }: { results: StoredPredict
                       })()}
                     </td>
                     <td className="py-2.5 text-center">
-                      {(() => {
+                      {hasResult ? (() => {
                         const pred = entry.predictions[selectedModel];
                         const scores = pred.predictedScore.split(' / ');
-                        const hasExact = scores.some(s => {
-                          const [h, a] = s.split('-').map(Number);
-                          return h === res.homeScore && a === res.awayScore;
-                        });
+                        const hasExact = scores.some(s => { const [h, a] = s.split('-').map(Number); return h === res!.homeScore && a === res!.awayScore; });
                         const [ph, pa] = scores[0].split('-').map(Number);
                         const predDir = !isNaN(ph) && !isNaN(pa) ? (ph > pa ? 'HOME' : pa > ph ? 'AWAY' : 'DRAW') : null;
-                        const actualDir = res.homeScore > res.awayScore ? 'HOME' : res.awayScore > res.homeScore ? 'AWAY' : 'DRAW';
+                        const actualDir = res!.homeScore > res!.awayScore ? 'HOME' : res!.awayScore > res!.homeScore ? 'AWAY' : 'DRAW';
                         const hasCorrect = !hasExact && predDir === actualDir;
-                        const cellColor = hasExact ? '#22c55e' : hasCorrect ? '#facc15' : '#ef4444';
-                        if (hasExact) return <span className="font-bold" style={{ color: '#22c55e' }}>✓ 精准命中</span>;
-                        if (hasCorrect) return <span className="font-bold" style={{ color: '#facc15' }}>✓ 方向正确</span>;
-                        return <span className="font-bold" style={{ color: '#ef4444' }}>✗</span>;
-                      })()}
+                        return hasExact ? <span className="font-bold" style={{ color: '#22c55e' }}>✓ 精准命中</span> : hasCorrect ? <span className="font-bold" style={{ color: '#facc15' }}>✓ 方向正确</span> : <span className="font-bold" style={{ color: '#ef4444' }}>✗</span>;
+                      })() : (
+                        <span className="text-white/15 text-[10px]">-</span>
+                      )}
                     </td>
                   </>
                 )}
@@ -251,7 +249,7 @@ export default function AiLabPage() {
       .finally(() => {
         setMounted(true);
         setLeaderboard(getLeaderboard());
-        setAllResults(getRecentLabResults(200));
+        setAllResults(getAllLabPredictions());
       });
   }, []);
 
