@@ -72,18 +72,9 @@ export default function StandingsPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">📊 小组积分榜</h1>
         <p className="text-gray-500 text-sm">
           12个小组 · 每组前2名直接晋级32强 · 8个最佳第3名晋级
-          {hasLiveData && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">实时数据</span>}
-          {!hasLiveData && !loading && <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">静态数据</span>}
         </p>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-          <p className="text-yellow-600 font-medium text-sm">⚠️ 实时数据获取失败，显示已完赛数据</p>
-          <p className="text-yellow-400 text-xs mt-1">{error}</p>
-        </div>
-      )}
 
       {/* Loading */}
       {showLoading && (

@@ -151,13 +151,6 @@ export default function HomePage() {
       <section className="bg-[#040810] border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-3 py-2"><CountdownBar /></div>
       </section>
-      {as === 'err' && (
-        <div className="max-w-7xl mx-auto px-3 py-1.5">
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-center text-red-400 text-xs">
-            ⚠️ 数据加载失败，显示缓存数据
-          </div>
-        </div>
-      )}
 
       {/* ═══════ Hero — 4-Model Prediction ═══════ */}
       <section className="max-w-7xl mx-auto px-3 py-4 relative">
