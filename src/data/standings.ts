@@ -1,7 +1,7 @@
 // Standings — all real-time data now comes from /api/standings
 // Team ELO data kept for championship probability calculations
 import { teams, type Team, groups as staticGroups } from './teams';
-import { allMatches } from './matches';
+import { allMatches, applyCompletedResults } from './matches';
 import { getTeam } from './teams';
 
 export interface ChampionshipProb {
@@ -22,6 +22,7 @@ export interface StaticStandingGroup {
 
 /** Generate static standings from completed match results */
 export function generateStaticStandings(): StaticStandingGroup[] {
+  applyCompletedResults(); // ensure match scores are applied before computing standings
   const result: StaticStandingGroup[] = [];
   for (const g of staticGroups) {
     const teamStats: Record<string, { played: number; won: number; draw: number; lost: number; gf: number; ga: number; pts: number }> = {};
