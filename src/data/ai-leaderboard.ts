@@ -49,7 +49,7 @@ export interface LeaderboardEntry {
    ═══════════════════════════════════════════════════════════ */
 
 const STORAGE_KEY = 'wc_ai_lab';
-const DATA_VERSION = 7; // fix: use real match times (not screenshot/report time) for recorded predictions
+const DATA_VERSION = 9; // fix: unified match ID resolution with apiMatchToInternalId
 
 function load(): StoredPrediction[] {
   if (typeof window === 'undefined') return [];
@@ -161,7 +161,13 @@ export function checkLabResults(apiMatches: any[]): void {
   let changed = false;
   for (const entry of all) {
     if (entry.result) continue;
-    const m = apiMatches.find((x: any) => String(x.id) === String(entry.matchId) && x.status === 'FINISHED');
+    // Match by ID first (API numeric), then fall back to team names (internal IDs, historical data)
+    const m = apiMatches.find((x: any) =>
+      x.status === 'FINISHED' && (
+        String(x.id) === String(entry.matchId) ||
+        (x.homeTeam?.name === entry.homeTeam && x.awayTeam?.name === entry.awayTeam)
+      )
+    );
     if (!m) continue;
     const h = m.score?.fullTime?.home, a = m.score?.fullTime?.away;
     if (h == null || a == null) continue;

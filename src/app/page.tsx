@@ -11,6 +11,7 @@ import { getTeam } from '@/data/teams';
 import { allMatches as staticMatches, getExpertPrediction, applyCompletedResults } from '@/data/matches';
 import { AI_MODELS, MODEL_ORDER, type ModelId } from '@/data/ai-models';
 import { getPredictions } from '@/data/predictions';
+import { tlaToTeamId, apiMatchToInternalId } from '@/lib/use-api-data';
 import {
   getLeaderboard,
   syncLabPredictions,
@@ -29,8 +30,6 @@ function bj(u: string) {
 function ng(r: string | null) { return r ? r.replace(/^(GROUP_|Group\s)/i, '').trim() : ''; }
 function tb() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
 const TL: Record<string, string> = { MEX: 'mexico', KOR: 'south-korea', CZE: 'czech', RSA: 'south-africa', CAN: 'canada', QAT: 'qatar', SUI: 'switzerland', BIH: 'bosnia', BRA: 'brazil', HAI: 'haiti', SCO: 'scotland', MAR: 'morocco', USA: 'usa', AUS: 'australia', TUR: 'turkey', PAR: 'paraguay', GER: 'germany', CIV: 'ivory-coast', ECU: 'ecuador', CUW: 'curacao', NED: 'netherlands', SWE: 'sweden', TUN: 'tunisia', JPN: 'japan', BEL: 'belgium', IRN: 'iran', NZL: 'new-zealand', EGY: 'egypt', ESP: 'spain', KSA: 'saudi-arabia', URY: 'uruguay', CPV: 'cape-verde', FRA: 'france', IRQ: 'iraq', NOR: 'norway', SEN: 'senegal', ARG: 'argentina', AUT: 'austria', JOR: 'jordan', ALG: 'algeria', POR: 'portugal', UZB: 'uzbekistan', COL: 'colombia', COD: 'dr-congo', ENG: 'england', GHA: 'ghana', PAN: 'panama', CRO: 'croatia' };
-function ti(tla: string) { return TL[tla] || tla?.toLowerCase() || ''; }
-
 /* ── Medal colors ── */
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉', 4: '🏅' };
 const MEDAL_BG: Record<number, string> = {
@@ -76,6 +75,9 @@ export default function HomePage() {
   const upcoming = todayAll.filter((m: any) => m.status !== 'FINISHED');
   const finished = todayAll.filter((m: any) => m.status === 'FINISHED');
 
+  /** Map API numeric ID → internal match ID (m1-m104) — uses shared utility */
+  const resolveMatchId = (m: any) => apiMatchToInternalId(m, all);
+
   // ── AI Lab: seed history + sync predictions ──
   useEffect(() => {
     seedHistoricalData(); // pre-fill past matches on first visit
@@ -97,10 +99,10 @@ export default function HomePage() {
     }> = [];
 
     for (const m of todayMatches) {
-      const hi = ti(m.homeTeam?.tla), ai = ti(m.awayTeam?.tla);
+      const hi = tlaToTeamId(m.homeTeam?.tla), ai = tlaToTeamId(m.awayTeam?.tla);
       const h = getTeam(hi), a = getTeam(ai);
       if (!h || !a) continue;
-      const matchId = String(m.id);
+      const matchId = resolveMatchId(m);
       const predSet = getPredictions(matchId, { homeTeamId: h.id, awayTeamId: a.id });
       if (!predSet) continue;
 
@@ -136,28 +138,11 @@ export default function HomePage() {
   const isTodayHero = heroDate === today;
 
   const heroPredSet = hero ? (() => {
-    const hi = ti(hero.homeTeam?.tla), ai = ti(hero.awayTeam?.tla);
+    const hi = tlaToTeamId(hero.homeTeam?.tla), ai = tlaToTeamId(hero.awayTeam?.tla);
     const h = getTeam(hi), a = getTeam(ai);
     if (!h || !a) return null;
-    return getPredictions(String(hero.id), { homeTeamId: h.id, awayTeamId: a.id });
+    return getPredictions(resolveMatchId(hero), { homeTeamId: h.id, awayTeamId: a.id });
   })() : null;
-
-  const midIdx = (id: number | string) => {
-    if (typeof id === 'string') return id;
-    // Primary: match by team TLA → internal match ID
-    const apiMatch = all.find((x: any) => x.id === id);
-    if (apiMatch) {
-      const hi = ti(apiMatch.homeTeam?.tla), ai = ti(apiMatch.awayTeam?.tla);
-      const h = getTeam(hi), a = getTeam(ai);
-      if (h && a) {
-        const match = staticMatches.find(m => m.homeTeamId === h.id && m.awayTeamId === a.id);
-        if (match) return match.id;
-      }
-    }
-    // Fallback: position-based
-    const i = all.findIndex((x: any) => x.id === id);
-    return i >= 0 ? `m${i + 1}` : `m${id % 100}`;
-  };
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #081224 0%, #0b1730 40%, #0d1b3d 100%)' }}>
@@ -187,7 +172,7 @@ export default function HomePage() {
           );
 
           const m = hero;
-          const hi = ti(m.homeTeam?.tla), ai = ti(m.awayTeam?.tla);
+          const hi = tlaToTeamId(m.homeTeam?.tla), ai = tlaToTeamId(m.awayTeam?.tla);
           const h = getTeam(hi), a = getTeam(ai);
           const isLive = m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === 'PAUSED';
           const isFinished = m.status === 'FINISHED';
@@ -310,7 +295,7 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-              <a href={`/match/${midIdx(m.id)}`} className="block text-center py-2.5 bg-white/[0.03] hover:bg-white/[0.06] text-white/40 hover:text-gold text-xs font-medium transition-colors">
+              <a href={`/match/${resolveMatchId(m)}`} className="block text-center py-2.5 bg-white/[0.03] hover:bg-white/[0.06] text-white/40 hover:text-gold text-xs font-medium transition-colors">
                 查看完整比赛分析 →
               </a>
             </div>
@@ -322,7 +307,7 @@ export default function HomePage() {
       {(() => {
         const tomorrow = all.filter((m: any) => {
           const d = bj(m.utcDate).date;
-          return d > today && getExpertPrediction(midIdx(m.id));
+          return d > today && getExpertPrediction(resolveMatchId(m));
         }).slice(0, 4);
         if (tomorrow.length === 0) return null;
         return (
@@ -333,9 +318,9 @@ export default function HomePage() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {tomorrow.map((m: any) => {
-                const hi = ti(m.homeTeam?.tla), ai = ti(m.awayTeam?.tla);
+                const hi = tlaToTeamId(m.homeTeam?.tla), ai = tlaToTeamId(m.awayTeam?.tla);
                 const h = getTeam(hi), a = getTeam(ai);
-                const pred = getExpertPrediction(midIdx(m.id));
+                const pred = getExpertPrediction(resolveMatchId(m));
                 return (
                   <div key={m.id} className="bg-white/[0.04] backdrop-blur-sm rounded-xl border border-white/[0.08] p-3 text-center">
                     <div className="text-[10px] text-white/30 mb-2">{bj(m.utcDate).time}</div>
@@ -453,12 +438,12 @@ export default function HomePage() {
           <h2 className="text-sm font-bold text-white mb-3">📅 今日赛程</h2>
           <div className="space-y-1.5">
             {upcoming.filter((m: any) => m.id !== hero?.id).map((m: any) => {
-              const hi = ti(m.homeTeam?.tla), ai = ti(m.awayTeam?.tla);
+              const hi = tlaToTeamId(m.homeTeam?.tla), ai = tlaToTeamId(m.awayTeam?.tla);
               const h = getTeam(hi), a = getTeam(ai);
-              const predSet = h && a ? getPredictions(String(m.id), { homeTeamId: h.id, awayTeamId: a.id }) : null;
+              const predSet = h && a ? getPredictions(resolveMatchId(m), { homeTeamId: h.id, awayTeamId: a.id }) : null;
               const live = m.status === 'IN_PLAY' || m.status === 'LIVE';
               return (
-                <a key={m.id} href={`/match/${midIdx(m.id)}`}
+                <a key={m.id} href={`/match/${resolveMatchId(m)}`}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group ${live ? 'bg-green-500/5 border border-green-500/20' : 'hover:bg-white/[0.04]'}`}>
                   <div className="w-11 text-center shrink-0">
                     <div className="text-xs font-bold text-white/70 font-mono">{bj(m.utcDate).time}</div>
@@ -506,10 +491,10 @@ export default function HomePage() {
           <h2 className="text-sm font-bold text-white mb-3">✅ 今日赛果</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {finished.map((m: any) => {
-              const hi = ti(m.homeTeam?.tla), ai = ti(m.awayTeam?.tla);
+              const hi = tlaToTeamId(m.homeTeam?.tla), ai = tlaToTeamId(m.awayTeam?.tla);
               const h = getTeam(hi), a = getTeam(ai);
               return (
-                <a key={m.id} href={`/match/${midIdx(m.id)}`} className="bg-white/[0.04] rounded-lg p-3 text-center hover:bg-white/[0.06] border border-white/[0.02] transition-colors">
+                <a key={m.id} href={`/match/${resolveMatchId(m)}`} className="bg-white/[0.04] rounded-lg p-3 text-center hover:bg-white/[0.06] border border-white/[0.02] transition-colors">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <span className="text-white/70 text-xs truncate max-w-[60px]">{h?.name || m.homeTeam?.shortName}</span>
                     {h && <CountryCodeBadge teamId={h.id} size="sm" />}
@@ -565,7 +550,7 @@ export default function HomePage() {
                       </thead>
                       <tbody>
                         {ags.table.map((row: any, i: number) => {
-                          const tid = ti(row.team?.tla);
+                          const tid = tlaToTeamId(row.team?.tla);
                           const t = getTeam(tid);
                           return (
                             <tr key={row.team?.tla} className={`border-b border-white/[0.02] ${i < 2 ? 'bg-white/[0.04]' : ''}`}>

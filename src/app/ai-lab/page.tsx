@@ -16,7 +16,7 @@ import {
 } from '@/data/ai-leaderboard';
 import { getPredictions } from '@/data/predictions';
 import { getTeam } from '@/data/teams';
-import { tlaToTeamId } from '@/lib/use-api-data';
+import { tlaToTeamId, apiMatchToInternalId } from '@/lib/use-api-data';
 
 /* ── Helpers ── */
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉', 4: '4️⃣' };
@@ -215,7 +215,8 @@ export default function AiLabPage() {
           const hi = tlaToTeamId(m.homeTeam?.tla || ''), ai = tlaToTeamId(m.awayTeam?.tla || '');
           const h = getTeam(hi), a = getTeam(ai);
           if (!h || !a) continue;
-          const predSet = getPredictions(String(m.id), { homeTeamId: h.id, awayTeamId: a.id });
+          const matchId = apiMatchToInternalId(m, apiMatches);
+          const predSet = getPredictions(matchId, { homeTeamId: h.id, awayTeamId: a.id });
           if (!predSet) continue;
 
           const bjDate = (() => {
@@ -228,7 +229,7 @@ export default function AiLabPage() {
           })();
 
           const entry = {
-            matchId: String(m.id),
+            matchId,
             homeTeam: h.name,
             awayTeam: a.name,
             date: bjDate.date,
