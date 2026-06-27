@@ -49,7 +49,7 @@ export interface LeaderboardEntry {
    ═══════════════════════════════════════════════════════════ */
 
 const STORAGE_KEY = 'wc_ai_lab';
-const DATA_VERSION = 10; // fix: seed all 104 matches (not just completed 16)
+const DATA_VERSION = 11; // v11: upgraded prediction algorithm with realistic score distributions
 
 function load(): StoredPrediction[] {
   if (typeof window === 'undefined') return [];

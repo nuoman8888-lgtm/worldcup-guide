@@ -33,8 +33,8 @@ export const AI_MODELS: Record<string, ModelInfo> = {
     bgClass: 'bg-purple-500/10',
     borderClass: 'border-purple-500/25',
     textClass: 'text-purple-300',
-    description: 'ELO至上，保守稳健',
-    personality: 'ELO权重90%，FIFA排名辅助，偏好低比分、稳健预测，极少预测冷门',
+    description: 'ELO至上 · 零封信仰',
+    personality: 'ELO权重95%。极度保守，偏好低比分与零封。强队必胜，极少冷门。典型预测：2-0, 1-0, 3-0',
   },
   chatgpt: {
     id: 'chatgpt',
@@ -44,8 +44,8 @@ export const AI_MODELS: Record<string, ModelInfo> = {
     bgClass: 'bg-emerald-500/10',
     borderClass: 'border-emerald-500/25',
     textClass: 'text-emerald-300',
-    description: '数据均衡，中庸之道',
-    personality: 'ELO+FIFA排名+历史战绩均衡加权，预测偏中庸，不激进也不保守',
+    description: '数据均衡 · 全能选手',
+    personality: 'ELO+FIFA+状态均衡加权。平稳中庸，不激进也不保守。典型预测：2-1, 1-1, 2-0',
   },
   deepseek: {
     id: 'deepseek',
@@ -55,8 +55,8 @@ export const AI_MODELS: Record<string, ModelInfo> = {
     bgClass: 'bg-blue-500/10',
     borderClass: 'border-blue-500/25',
     textClass: 'text-blue-300',
-    description: '状态为王，敢猜冷门',
-    personality: '近期状态权重最高，敢于预测冷门，看好状态火热的弱队爆冷',
+    description: '状态为王 · 冷门猎手',
+    personality: '近期状态权重70%。最爱爆冷，看状态不看名气。高分乱战爱好者。典型预测：3-2, 2-2, 1-2',
   },
   qwen: {
     id: 'qwen',
@@ -66,8 +66,8 @@ export const AI_MODELS: Record<string, ModelInfo> = {
     bgClass: 'bg-amber-500/10',
     borderClass: 'border-amber-500/25',
     textClass: 'text-amber-300',
-    description: '攻击至上，高比分党',
-    personality: '倾向高比分、进攻型预测，重视球队攻击力和近期进球数',
+    description: '进攻狂魔 · 大球之王',
+    personality: '攻击力权重极高。永远预测高比分，轻视防守。强队直接屠杀模式。典型预测：4-1, 3-1, 5-2',
   },
 };
 
@@ -144,61 +144,82 @@ function seedHash(homeId: string, awayId: string, modelId: string): number {
   return Math.abs(h);
 }
 
-/** Score prediction — per-model unique logic, no shared formula */
+/** Score prediction — per-model unique logic.
+ *  Uses team strength ratios to produce realistic football scorelines.
+ *  Strong favorites get clean sheets or big wins, balanced teams get tight games.
+ */
 function predictScore(
   home: Team, away: Team,
-  eloDiff: number,    // already adjusted ELO diff
+  eloDiff: number,
   homeFormScore: number,
   awayFormScore: number,
-  aggression: number,      // 0-1, how many total goals
-  conservatism: number,    // 0-1, how close the score (high = 1-0 style, low = 4-2 style)
-  favorUpset: number,      // 0-1, how much to boost underdog
-  seed: number,            // deterministic seed for this model+match
+  aggression: number,      // 0-1, total goal inflation
+  conservatism: number,    // 0-1, suppresses scoring (high = fewer goals)
+  favorUpset: number,      // 0-1, boosts underdog scoring
+  seed: number,
 ): { homeGoals: number; awayGoals: number } {
-  // Use seed to produce a deterministic "roll" between -0.5 and +0.5
-  const roll = ((seed % 1000) / 1000) - 0.5;
 
-  // Home advantage base
-  const homeAdv = 0.4 * (1 - conservatism) + roll * 0.3;
+  // ── Strength ratio: how much better is the home team?
+  // eloDiff of +400 → ratio ~9:1;  0 → ~1:1;  -400 → ~1:9
+  const strengthRatio = Math.pow(10, eloDiff / 400);
+  const homeShare = strengthRatio / (1 + strengthRatio); // 0-1, home's share of total strength
 
-  // Expected goals — wider range than before
-  // Strong favorite (eloDiff +300): homeXG ~2.5, awayXG ~0.5
-  // Balanced (eloDiff 0): homeXG ~1.6, awayXG ~1.2
-  // Underdog (eloDiff -300): homeXG ~0.7, awayXG ~2.3
-  let homeXG = 1.5 + (eloDiff / 400) * 1.0 + homeAdv;
-  let awayXG = 1.2 - (eloDiff / 400) * 0.8 - homeAdv * 0.5;
+  // ── Total expected goals (baseline 2.5, scales with aggression, shrinks with conservatism)
+  // Higher aggression + wide strength gap = more goals
+  const gapBonus = Math.abs(eloDiff) / 200; // 0-2.5 extra goals for big mismatches
+  const totalXG = 2.2 + aggression * 2.0 - conservatism * 0.8 + gapBonus * 0.7;
 
-  // Form adjustment
-  homeXG += (homeFormScore - awayFormScore) * 0.15 * (1 - conservatism);
-  awayXG += (awayFormScore - homeFormScore) * 0.10 * (1 - conservatism);
+  // ── Split goals between teams
+  // Home gets more if stronger, but with some randomness from seed
+  let homeShareAdjusted = homeShare;
 
-  // Aggression inflates goals
-  homeXG += aggression * 0.6;
-  awayXG += aggression * 0.5;
+  // Form adjustment: in-form team gets more scoring share
+  const formDelta = (homeFormScore - awayFormScore) * 0.03;
+  homeShareAdjusted += formDelta;
 
-  // Upset boost for underdog
-  if (eloDiff < -50) {
-    awayXG += favorUpset * 0.4;
-  } else if (eloDiff > 50) {
-    homeXG += favorUpset * 0.2;
+  // Upset factor: underdog gets boosted
+  if (eloDiff > 60) {
+    homeShareAdjusted += favorUpset * 0.04; // slight boost to already-strong home
+  } else if (eloDiff < -60) {
+    homeShareAdjusted -= favorUpset * 0.08; // bigger boost to underdog away team
   }
 
-  // Broader clamp range
-  homeXG = Math.max(0, Math.min(5.5, homeXG));
-  awayXG = Math.max(0, Math.min(5.0, awayXG));
+  // Seed-based randomness — ±12% on share
+  const shareNoise = ((seed % 100) / 100 - 0.5) * 0.24;
+  homeShareAdjusted = Math.max(0.08, Math.min(0.92, homeShareAdjusted + shareNoise));
 
-  // Round with seed-based jitter
-  const jitter = ((seed % 7) - 3) * 0.15;
-  let h = Math.round(homeXG + jitter);
-  let a = Math.round(awayXG - jitter * 0.5);
+  // ── Compute per-team xG
+  let homeXG = totalXG * homeShareAdjusted;
+  let awayXG = totalXG * (1 - homeShareAdjusted);
 
-  // Tie-break: if xG difference is clear but rounded score tied
-  if (h === a && homeXG > awayXG + 0.5) h++;
-  else if (h === a && awayXG > homeXG + 0.5) a++;
+  // ── Convert xG to discrete goals using seed-based offsets
+  // This produces more varied scorelines than simple Math.round
+  const seed2 = (seed * 7919 + 104729) % 10000;
+  const seed3 = (seed * 6271 + 31397) % 10000;
 
-  // Floor and ceiling
-  h = Math.max(0, Math.min(5, h));
-  a = Math.max(0, Math.min(5, a));
+  // Weighted rounding: deterministic decider
+  const homeFrac = homeXG - Math.floor(homeXG);
+  const awayFrac = awayXG - Math.floor(awayXG);
+  const homeThreshold = 0.15 + (seed2 % 100) / 200;   // 0.15 - 0.64
+  const awayThreshold = 0.15 + (seed3 % 100) / 200;
+
+  let h = Math.floor(homeXG) + (homeFrac > homeThreshold ? 1 : 0);
+  let a = Math.floor(awayXG) + (awayFrac > awayThreshold ? 1 : 0);
+
+  // ── Floor + ceiling (generous — big wins are possible)
+  h = Math.max(0, Math.min(8, h));
+  a = Math.max(0, Math.min(7, a));
+
+  // ── Tie-break: if xG says clear favorite but score tied, break the tie
+  if (h === a) {
+    if (homeXG > awayXG + 0.7) h++;
+    else if (awayXG > homeXG + 0.7) a++;
+  }
+
+  // ── Cap blowout gap based on ELO difference
+  const maxGap = Math.max(3, Math.round(Math.abs(eloDiff) / 120));
+  if (h - a > maxGap) { a = h - maxGap; if (a < 0) a = 0; }
+  if (a - h > maxGap) { h = a - maxGap; if (h < 0) h = 0; }
 
   return { homeGoals: h, awayGoals: a };
 }
@@ -208,118 +229,138 @@ function predictScore(
    ═══════════════════════════════════════════════════════════ */
 
 function simulateClaude(home: Team, away: Team): ModelPrediction {
-  // Conservative: ELO-heavy, low scoring, favors favorites
-  const eloDiff = (home.elo - away.elo) * 0.9 + (formScore(home) - formScore(away)) * 15;
+  // Claude: ELO purist, conservative. Prefers clean sheets, low scores, rarely predicts upsets.
+  const hForm = formScore(home), aForm = formScore(away);
+  const eloDiff = (home.elo - away.elo) * 0.95 + (hForm - aForm) * 10;
   const seed = seedHash(home.id, away.id, 'claude');
-  const score = predictScore(home, away, eloDiff, formScore(home), formScore(away), 0.1, 0.75, 0.05, seed);
+  // Low aggression (0.05), high conservatism (0.7), minimal upset favor
+  const score = predictScore(home, away, eloDiff, hForm, aForm, 0.05, 0.7, 0.03, seed);
 
-  const rawH = eloWinProb(home.elo, away.elo) * 0.87 + 0.07;
-  const rawD = Math.max(0.16, 0.27 - Math.abs(home.elo - away.elo) / 550);
+  const rawH = eloWinProb(home.elo, away.elo) * 0.85 + 0.06;
+  const rawD = Math.max(0.18, 0.28 - Math.abs(home.elo - away.elo) / 500);
   const rawA = 1 - rawH - rawD;
   const [hw, dw, aw] = normalize(rawH, rawD, Math.max(0, rawA));
 
   const hWin = score.homeGoals > score.awayGoals;
   const winner = hWin ? home.name : score.awayGoals > score.homeGoals ? away.name : '平局';
-  const conf = Math.min(86, Math.round(52 + Math.abs(home.elo - away.elo) / 14));
+  const conf = Math.min(85, Math.round(50 + Math.abs(home.elo - away.elo) / 12));
 
   return {
     modelId: 'claude',
     predictedScore: `${score.homeGoals}-${score.awayGoals}`,
     winner, homeWinProb: hw, drawProb: dw, awayWinProb: aw, confidence: conf,
-    reasoning: home.elo - away.elo > 120
-      ? `${home.name} ELO明显占优（+${home.elo - away.elo}），稳守反击即可`
-      : home.elo - away.elo < -120
-        ? `${away.name} ELO更高，${home.name}主场抢分不易`
-        : '两队实力接近，趋向低比分平局',
+    reasoning: home.elo - away.elo > 150
+      ? `${home.name} 实力碾压（ELO +${home.elo - away.elo}），零封可期`
+      : home.elo - away.elo > 60
+        ? `${home.name} ELO占优，稳健取胜`
+        : home.elo - away.elo < -150
+          ? `${away.name} ELO遥遥领先，${home.name}少输当赢`
+          : home.elo - away.elo < -60
+            ? `${away.name} 纸面更强，客场小胜`
+            : '势均力敌，低比分平局概率大',
   };
 }
 
 function simulateChatGPT(home: Team, away: Team): ModelPrediction {
-  // Balanced: ELO + FIFA rank + form, moderate everything
-  const eloDiff = (home.elo - away.elo) * 0.6 + (formScore(home) - formScore(away)) * 35;
+  // ChatGPT: data-balanced. Weights ELO + FIFA rank + form equally. Moderate scoring.
+  const hForm = formScore(home), aForm = formScore(away);
+  const eloDiff = (home.elo - away.elo) * 0.55 + (away.fifaRank - home.fifaRank) * 2.5 + (hForm - aForm) * 25;
   const seed = seedHash(home.id, away.id, 'chatgpt');
-  const score = predictScore(home, away, eloDiff, formScore(home), formScore(away), 0.3, 0.4, 0.2, seed);
+  const score = predictScore(home, away, eloDiff, hForm, aForm, 0.25, 0.45, 0.15, seed);
 
   const eloH = eloWinProb(home.elo, away.elo);
-  const rankBonus = (away.fifaRank - home.fifaRank) / 250 * 0.06;
-  const rawH = eloH * 0.55 + 0.22 + rankBonus;
-  const rawD = Math.max(0.17, 0.27 - Math.abs(home.elo - away.elo) / 700);
+  const rankBonus = (away.fifaRank - home.fifaRank) / 200 * 0.05;
+  const rawH = eloH * 0.50 + 0.24 + rankBonus;
+  const rawD = Math.max(0.16, 0.27 - Math.abs(home.elo - away.elo) / 650);
   const rawA = 1 - rawH - rawD;
   const [hw, dw, aw] = normalize(rawH, rawD, Math.max(0, rawA));
 
   const hWin = score.homeGoals > score.awayGoals;
   const winner = hWin ? home.name : score.awayGoals > score.homeGoals ? away.name : '平局';
-  const conf = Math.min(80, Math.round(47 + Math.abs(home.elo - away.elo) / 20));
+  const conf = Math.min(78, Math.round(45 + Math.abs(home.elo - away.elo) / 18));
 
   return {
     modelId: 'chatgpt',
     predictedScore: `${score.homeGoals}-${score.awayGoals}`,
     winner, homeWinProb: hw, drawProb: dw, awayWinProb: aw, confidence: conf,
-    reasoning: home.fifaRank < away.fifaRank - 8
-      ? `${home.name} FIFA排名更高（#${home.fifaRank} vs #${away.fifaRank}），纸面占优`
-      : away.fifaRank < home.fifaRank - 8
-        ? `${away.name} 排名远超${home.name}，经验更丰富`
-        : '纸面数据接近，胜负取决于临场发挥',
+    reasoning: home.fifaRank < away.fifaRank - 10
+      ? `${home.name} FIFA排名碾压（#${home.fifaRank} vs #${away.fifaRank}），数据全面占优`
+      : away.fifaRank < home.fifaRank - 10
+        ? `${away.name} 排名远超${home.name}（#${away.fifaRank} vs #${home.fifaRank}），经验丰富`
+        : Math.abs(home.elo - away.elo) < 40
+          ? '数据指标接近，任何结果都有可能'
+          : home.elo > away.elo
+            ? `${home.name} 综合数据小幅领先`
+            : `${away.name} 略占上风`,
   };
 }
 
 function simulateDeepSeek(home: Team, away: Team): ModelPrediction {
-  // Form-heavy: heavily weights recent results, loves upsets, aggressive scoring
+  // DeepSeek: form fanatic, upset lover. Heavily weights recent 5-game form, loves chaos.
   const hForm = formScore(home), aForm = formScore(away);
-  const eloDiff = (home.elo - away.elo) * 0.3 + (hForm - aForm) * 70;
+  const eloDiff = (home.elo - away.elo) * 0.25 + (hForm - aForm) * 60;
   const seed = seedHash(home.id, away.id, 'deepseek');
-  const score = predictScore(home, away, eloDiff, hForm, aForm, 0.45, 0.2, 0.5, seed);
+  // High aggression (0.55), low conservatism (0.15), strong upset bias (0.6)
+  const score = predictScore(home, away, eloDiff, hForm, aForm, 0.55, 0.15, 0.6, seed);
 
-  const rawH = eloWinProb(home.elo, away.elo) * 0.3 + 0.28 + (hForm - aForm) * 0.06;
-  const rawD = Math.max(0.13, 0.22 - Math.abs(hForm - aForm) * 0.04);
-  const rawA = 1 - rawH - rawD;
-  const [hw, dw, aw] = normalize(Math.max(0.06, rawH), rawD, Math.max(0.06, rawA));
-
-  const hWin = score.homeGoals > score.awayGoals;
-  const winner = hWin ? home.name : score.awayGoals > score.homeGoals ? away.name : '平局';
-  const conf = Math.min(75, Math.round(40 + Math.abs(hForm - aForm) * 10 + Math.abs(home.elo - away.elo) / 30));
-
-  return {
-    modelId: 'deepseek',
-    predictedScore: `${score.homeGoals}-${score.awayGoals}`,
-    winner, homeWinProb: hw, drawProb: dw, awayWinProb: aw, confidence: conf,
-    reasoning: hForm - aForm > 1
-      ? `🔥 ${home.name}近5场${home.recentForm.filter(f=>f==='W').length}胜气势如虹，力挺爆冷！`
-      : aForm - hForm > 1
-        ? `⚠️ ${away.name}近期状态火爆（${away.recentForm.filter(f=>f==='W').length}胜），${home.name}危险`
-        : hForm > 0
-          ? `${home.name}势头不错，看好不败`
-          : '双方状态都不稳，大球可期',
-  };
-}
-
-function simulateQwen(home: Team, away: Team): ModelPrediction {
-  // Attack-heavy: HIGH goals, loves big scorelines, attack-oriented
-  const hForm = formScore(home), aForm = formScore(away);
-  const eloDiff = (home.elo - away.elo) * 0.5 + (hForm - aForm) * 40;
-  const seed = seedHash(home.id, away.id, 'qwen');
-  const score = predictScore(home, away, eloDiff, hForm, aForm, 0.75, 0.1, 0.2, seed);
-
-  const rawH = eloWinProb(home.elo, away.elo) * 0.45 + 0.28 + (hForm - aForm) * 0.04;
-  const rawD = Math.max(0.10, 0.20 - Math.abs(home.elo - away.elo) / 450);
+  const rawH = eloWinProb(home.elo, away.elo) * 0.25 + 0.30 + (hForm - aForm) * 0.07;
+  const rawD = Math.max(0.12, 0.22 - Math.abs(hForm - aForm) * 0.05);
   const rawA = 1 - rawH - rawD;
   const [hw, dw, aw] = normalize(Math.max(0.05, rawH), rawD, Math.max(0.05, rawA));
 
   const hWin = score.homeGoals > score.awayGoals;
   const winner = hWin ? home.name : score.awayGoals > score.homeGoals ? away.name : '平局';
-  const conf = Math.min(78, Math.round(44 + Math.abs(home.elo - away.elo) / 22));
+  const conf = Math.min(72, Math.round(38 + Math.abs(hForm - aForm) * 12 + Math.abs(home.elo - away.elo) / 35));
 
+  return {
+    modelId: 'deepseek',
+    predictedScore: `${score.homeGoals}-${score.awayGoals}`,
+    winner, homeWinProb: hw, drawProb: dw, awayWinProb: aw, confidence: conf,
+    reasoning: hForm - aForm >= 2
+      ? `🔥 ${home.name} 状态爆棚（近5场${home.recentForm.filter(f=>f==='W').length}胜），冷门预警！`
+      : aForm - hForm >= 2
+        ? `⚠️ ${away.name} 势头正猛（近5场${away.recentForm.filter(f=>f==='W').length}胜），${home.name}恐被掀翻`
+        : hForm > aForm
+          ? `${home.name} 状态略好，有机会抢分`
+          : aForm > hForm
+            ? `${away.name} 近期状态更佳`
+            : `${home.recentForm.filter(f=>f==='W').length}胜${home.recentForm.filter(f=>f==='L').length}负 vs ${away.recentForm.filter(f=>f==='W').length}胜${away.recentForm.filter(f=>f==='L').length}负，大球博弈`,
+  };
+}
+
+function simulateQwen(home: Team, away: Team): ModelPrediction {
+  // Qwen: attack maximalist. Highest aggression, lowest conservatism, loves goals.
+  const hForm = formScore(home), aForm = formScore(away);
+  const eloDiff = (home.elo - away.elo) * 0.45 + (hForm - aForm) * 35;
+  const seed = seedHash(home.id, away.id, 'qwen');
+  // Very high aggression (0.85), very low conservatism (0.05), moderate upset
+  const score = predictScore(home, away, eloDiff, hForm, aForm, 0.85, 0.05, 0.25, seed);
+
+  const rawH = eloWinProb(home.elo, away.elo) * 0.40 + 0.30 + (hForm - aForm) * 0.04;
+  const rawD = Math.max(0.08, 0.19 - Math.abs(home.elo - away.elo) / 420);
+  const rawA = 1 - rawH - rawD;
+  const [hw, dw, aw] = normalize(Math.max(0.04, rawH), rawD, Math.max(0.04, rawA));
+
+  const hWin = score.homeGoals > score.awayGoals;
+  const winner = hWin ? home.name : score.awayGoals > score.homeGoals ? away.name : '平局';
+  const conf = Math.min(76, Math.round(42 + Math.abs(home.elo - away.elo) / 24));
+
+  const totalGoals = score.homeGoals + score.awayGoals;
   return {
     modelId: 'qwen',
     predictedScore: `${score.homeGoals}-${score.awayGoals}`,
     winner, homeWinProb: hw, drawProb: dw, awayWinProb: aw, confidence: conf,
-    reasoning: score.homeGoals + score.awayGoals >= 4
-      ? `⚽ 进球大战预警！${home.name}与${away.name}攻击力均不容小觑`
-      : score.homeGoals + score.awayGoals >= 3
-        ? '看好双方破门，大球方向'
-        : home.elo - away.elo > 60
-          ? `${home.name}攻击线占优，有望多点开花`
-          : '双方进攻欲望强烈，比分不会保守',
+    reasoning: totalGoals >= 5
+      ? `⚽⚽ 超级进球大战！双方防线形同虚设，${totalGoals}球盛宴`
+      : totalGoals >= 4
+        ? `⚽ 大球预警！${home.name}与${away.name}攻击力爆表`
+        : totalGoals >= 3
+          ? '看好双方互有破门，进球不会少'
+          : home.elo > away.elo + 100
+            ? `${home.name} 攻击线豪华，有望多点开花`
+            : away.elo > home.elo + 100
+              ? `${away.name} 火力全开，客场大胜可期`
+              : '双方进攻欲望强烈，比分不会保守',
   };
 }
 

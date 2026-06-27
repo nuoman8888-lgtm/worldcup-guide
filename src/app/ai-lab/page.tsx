@@ -189,7 +189,7 @@ export default function AiLabPage() {
   const [modelDetail, setModelDetail] = useState<ModelStats | null>(null);
   const [allResults, setAllResults] = useState<StoredPrediction[]>([]);
   const [mounted, setMounted] = useState(false);
-  const PAGE_SIZE = 200;
+  const PAGE_SIZE = 20;
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -466,7 +466,7 @@ export default function AiLabPage() {
             />
 
             {/* Pagination — inside the table container for visual cohesion */}
-            {mounted && allResults.length > PAGE_SIZE && (
+            {allResults.length > PAGE_SIZE && (
               <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
                 <span className="text-xs text-white/30">
                   共 {allResults.length} 场比赛 · 第 {page + 1}/{totalPages} 页
