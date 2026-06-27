@@ -4,52 +4,9 @@ import { useState, useMemo } from 'react';
 // import Link from 'next/link';
 // import PageTracker from '@/components/PageTracker';
 import { useApiStandings, tlaToTeamId, normalizeGroup } from '@/lib/use-api-data';
-import { getTeam, groups as staticGroups } from '@/data/teams';
-import { allMatches } from '@/data/matches';
+import { getTeam } from '@/data/teams';
+import { generateStaticStandings } from '@/data/standings';
 import CountryCodeBadge from '@/components/CountryCodeBadge';
-
-/** Generate static standings from completed match results */
-function generateStaticStandings(): Array<{
-  group: string; type: string;
-  table: Array<{ position: number; team: { id: number; name: string; shortName: string; tla: string }; playedGames: number; won: number; draw: number; lost: number; goalsFor: number; goalsAgainst: number; goalDifference: number; points: number }>;
-}> {
-  const result: any[] = [];
-  for (const g of staticGroups) {
-    const teamStats: Record<string, { played: number; won: number; draw: number; lost: number; gf: number; ga: number; pts: number }> = {};
-    // Initialize
-    for (const tid of g.teams) {
-      teamStats[tid] = { played: 0, won: 0, draw: 0, lost: 0, gf: 0, ga: 0, pts: 0 };
-    }
-    // Process completed matches
-    for (const m of allMatches) {
-      if (m.group !== g.name || m.status !== 'finished') continue;
-      if (m.homeScore == null || m.awayScore == null) continue;
-      const h = teamStats[m.homeTeamId], a = teamStats[m.awayTeamId];
-      if (!h || !a) continue;
-      h.played++; a.played++;
-      h.gf += m.homeScore; h.ga += m.awayScore;
-      a.gf += m.awayScore; a.ga += m.homeScore;
-      if (m.homeScore > m.awayScore) { h.won++; a.lost++; h.pts += 3; }
-      else if (m.homeScore < m.awayScore) { a.won++; h.lost++; a.pts += 3; }
-      else { h.draw++; a.draw++; h.pts += 1; a.pts += 1; }
-    }
-    // Build table
-    const table = Object.entries(teamStats)
-      .map(([tid, s]) => {
-        const t = getTeam(tid);
-        return {
-          position: 0,
-          team: { id: 0, name: t?.name || tid, shortName: t?.name || tid, tla: tid.toUpperCase() },
-          playedGames: s.played, won: s.won, draw: s.draw, lost: s.lost,
-          goalsFor: s.gf, goalsAgainst: s.ga, goalDifference: s.gf - s.ga, points: s.pts,
-        };
-      })
-      .sort((a, b) => b.points - a.points || (b.goalDifference - a.goalDifference) || (b.goalsFor - a.goalsFor));
-    table.forEach((row, i) => { row.position = i + 1; });
-    result.push({ group: `GROUP_${g.name}`, type: 'TOTAL', table });
-  }
-  return result;
-}
 
 export default function StandingsPage() {
   const { data, error, loading } = useApiStandings();

@@ -9,6 +9,7 @@ import { MyTeamWidget } from '@/components/MyTeamWidget';
 // import MyTeamModal from '@/components/MyTeamModal';
 import { getTeam } from '@/data/teams';
 import { allMatches as staticMatches, getExpertPrediction, applyCompletedResults } from '@/data/matches';
+import { generateStaticStandings } from '@/data/standings';
 import { AI_MODELS, MODEL_ORDER, type ModelId } from '@/data/ai-models';
 import { getPredictions } from '@/data/predictions';
 import { tlaToTeamId, apiMatchToInternalId } from '@/lib/use-api-data';
@@ -517,13 +518,14 @@ export default function HomePage() {
                 <a href="/standings" className="text-[10px] text-gold hover:underline">全部 →</a>
               </div>
               <div className="flex gap-1 px-4 py-2 overflow-x-auto scrollbar-hide border-b border-white/[0.06]">
-                {st.filter((s: any) => s.type === 'TOTAL' && s.group).map((g: any) => {
+                {(st.length > 0 ? st : generateStaticStandings()).filter((s: any) => s.type === 'TOTAL' && s.group).map((g: any) => {
                   const n = ng(g.group);
                   return <button key={g.group} onClick={() => setAg(n)} className={`shrink-0 w-8 h-8 rounded-lg text-xs font-bold ${ag === n ? 'bg-gold text-[#080c14]' : 'text-white/40 hover:text-white/70'}`}>{n}</button>;
                 })}
               </div>
               {(() => {
-                const ags = st.filter((s: any) => s.type === 'TOTAL' && s.group).find((g: any) => ng(g.group) === ag);
+                const source = st.length > 0 ? st : generateStaticStandings();
+                const ags = source.filter((s: any) => s.type === 'TOTAL' && s.group).find((g: any) => ng(g.group) === ag);
                 if (!ags) return <div className="p-4 text-center text-white/20 text-xs">暂无数据</div>;
                 return (
                   <div className="overflow-x-auto">
