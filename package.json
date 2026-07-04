@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "deploy": "next build && node scripts/clean-rsc-payloads.mjs && wrangler pages deploy out/ --project-name=worldcup-guide --branch=main"
+    "deploy": "next build && node scripts/generate-matches-api.mjs && node scripts/clean-rsc-payloads.mjs && wrangler pages deploy out/ --project-name=worldcup-guide --branch=main"
   },
   "dependencies": {
     "next": "^15.3.5",
