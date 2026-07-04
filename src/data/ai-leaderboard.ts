@@ -49,7 +49,7 @@ export interface LeaderboardEntry {
    ═══════════════════════════════════════════════════════════ */
 
 const STORAGE_KEY = 'wc_ai_lab';
-const DATA_VERSION = 11; // v11: upgraded prediction algorithm with realistic score distributions
+const DATA_VERSION = 14; // v14: added Round of 16 predictions
 
 function load(): StoredPrediction[] {
   if (typeof window === 'undefined') return [];
@@ -158,24 +158,38 @@ export function recordLabPrediction(
 
 export function checkLabResults(apiMatches: any[]): void {
   const all = load();
+  applyCompletedResults();
   let changed = false;
   for (const entry of all) {
     if (entry.result) continue;
-    // Match by ID first (API numeric), then fall back to team names (internal IDs, historical data)
+    // 1) Try API match first (live data)
     const m = apiMatches.find((x: any) =>
       x.status === 'FINISHED' && (
         String(x.id) === String(entry.matchId) ||
         (x.homeTeam?.name === entry.homeTeam && x.awayTeam?.name === entry.awayTeam)
       )
     );
-    if (!m) continue;
-    const h = m.score?.fullTime?.home, a = m.score?.fullTime?.away;
-    if (h == null || a == null) continue;
-    entry.result = {
-      homeScore: h, awayScore: a,
-      actualWinner: h > a ? entry.homeTeam : a > h ? entry.awayTeam : '平局',
-    };
-    changed = true;
+    if (m) {
+      const h = m.score?.fullTime?.home, a = m.score?.fullTime?.away;
+      if (h != null && a != null) {
+        entry.result = {
+          homeScore: h, awayScore: a,
+          actualWinner: h > a ? entry.homeTeam : a > h ? entry.awayTeam : '平局',
+        };
+        changed = true;
+        continue;
+      }
+    }
+    // 2) Fallback to COMPLETED_MATCHES static data
+    const completedScore = COMPLETED_MATCHES[entry.matchId];
+    if (completedScore) {
+      entry.result = {
+        homeScore: completedScore.homeScore, awayScore: completedScore.awayScore,
+        actualWinner: completedScore.homeScore > completedScore.awayScore ? entry.homeTeam
+          : completedScore.awayScore > completedScore.homeScore ? entry.awayTeam : '平局',
+      };
+      changed = true;
+    }
   }
   if (changed) save(all);
 }
@@ -312,13 +326,31 @@ export function getLabSummary(): {
 
 export function seedHistoricalData(): void {
   const all = load();
-  if (all.length > 0) return;
 
   applyCompletedResults();
 
-  // Seed ALL matches (completed + upcoming) with predictions
+  // Update existing entries with completed results (in case new matches finished)
+  let updated = false;
+  for (const entry of all) {
+    if (entry.result) continue;
+    const completedScore = COMPLETED_MATCHES[entry.matchId];
+    if (completedScore) {
+      const home = entry.homeTeam;
+      const away = entry.awayTeam;
+      entry.result = {
+        homeScore: completedScore.homeScore, awayScore: completedScore.awayScore,
+        actualWinner: completedScore.homeScore > completedScore.awayScore ? home
+          : completedScore.awayScore > completedScore.homeScore ? away : '平局',
+      };
+      updated = true;
+    }
+  }
+
+  // Seed ALL matches (completed + upcoming) with predictions if not already seeded
   for (const match of allMatches) {
     if (match.homeTeamId === 'TBD' || match.awayTeamId === 'TBD') continue;
+    // Skip if already exists
+    if (all.find(e => e.matchId === match.id)) continue;
     const home = getTeam(match.homeTeamId);
     const away = getTeam(match.awayTeamId);
     if (!home || !away) continue;
@@ -353,16 +385,29 @@ export function seedHistoricalData(): void {
       };
     }
     all.push(entry);
+    updated = true;
   }
-  save(all);
+
+  if (updated) save(all);
 }
 
 /** Get all stored predictions (including upcoming, not just judged) */
 export function getAllLabPredictions(): StoredPrediction[] {
   return load()
     .sort((a, b) => {
+      const da = a.date + 'T' + (a.time || '00:00') + ':00:08:00';
+      const db = b.date + 'T' + (b.time || '00:00') + ':00:08:00';
+      return new Date(da).getTime() - new Date(db).getTime();
+    });
+}
+
+/** Get only completed (judged) predictions with actual results — newest first */
+export function getCompletedLabPredictions(): StoredPrediction[] {
+  return load()
+    .filter(e => e.result)
+    .sort((a, b) => {
       const da = a.date + 'T' + (a.time || '00:00') + ':00+08:00';
       const db = b.date + 'T' + (b.time || '00:00') + ':00+08:00';
-      return new Date(da).getTime() - new Date(db).getTime();
+      return new Date(db).getTime() - new Date(da).getTime();
     });
 }
