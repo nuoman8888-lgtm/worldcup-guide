@@ -172,14 +172,23 @@ function buildGroupMatches(): Match[] {
   }
 
   // Round of 16: July 5-8 (8 matches)
-  const r16Slots = [
-    ['2026-07-05','01:00'],['2026-07-05','05:00'],
-    ['2026-07-06','04:00'],['2026-07-06','08:00'],
-    ['2026-07-07','03:00'],['2026-07-07','08:00'],
-    ['2026-07-08','00:00'],['2026-07-08','04:00'],
+  const r16Slots: Array<{date:string; time:string; home:string; away:string}> = [
+    // July 5
+    { date:'2026-07-05', time:'01:00', home:'canada', away:'morocco' },
+    { date:'2026-07-05', time:'05:00', home:'paraguay', away:'france' },
+    // July 6
+    { date:'2026-07-06', time:'04:00', home:'brazil', away:'norway' },
+    { date:'2026-07-06', time:'08:00', home:'mexico', away:'england' },
+    // July 7
+    { date:'2026-07-07', time:'03:00', home:'portugal', away:'spain' },
+    { date:'2026-07-07', time:'08:00', home:'usa', away:'belgium' },
+    // July 8
+    { date:'2026-07-08', time:'00:00', home:'argentina', away:'egypt' },
+    { date:'2026-07-08', time:'04:00', home:'switzerland', away:'colombia' },
   ];
-  for (let i=0; i<8; i++) {
-    matches.push({ id:`r16-${i+1}`, date:r16Slots[i][0], time:r16Slots[i][1], timeUTC:toUTC(r16Slots[i][1]), homeTeamId:'TBD', awayTeamId:'TBD', stage:'round16', status:'upcoming', venue:koVenues[i], city:koCities[i] });
+  for (let i=0; i<r16Slots.length; i++) {
+    const s = r16Slots[i];
+    matches.push({ id:`r16-${i+1}`, date:s.date, time:s.time, timeUTC:toUTC(s.time), homeTeamId:s.home, awayTeamId:s.away, stage:'round16', status:'upcoming', venue:koVenues[i], city:koCities[i] });
   }
 
   // Quarter-finals: July 10-12 (4 matches)
