@@ -254,22 +254,112 @@ export function formatDate(dateStr: string): string {
 
 /** Real completed match results — authoritative data source */
 export const COMPLETED_MATCHES: Record<string, { homeScore: number; awayScore: number }> = {
-  m1:  { homeScore: 2, awayScore: 0 },  // 墨西哥 2-0 南非
-  m2:  { homeScore: 2, awayScore: 1 },  // 韩国 2-1 捷克
-  m3:  { homeScore: 1, awayScore: 1 },  // 加拿大 1-1 波黑
-  m4:  { homeScore: 4, awayScore: 1 },  // 美国 4-1 巴拉圭
-  m5:  { homeScore: 1, awayScore: 1 },  // 卡塔尔 1-1 瑞士
-  m6:  { homeScore: 1, awayScore: 1 },  // 巴西 1-1 摩洛哥
-  m7:  { homeScore: 0, awayScore: 1 },  // 海地 0-1 苏格兰
-  m8:  { homeScore: 2, awayScore: 0 },  // 澳大利亚 2-0 土耳其
-  m9:  { homeScore: 7, awayScore: 1 },  // 德国 7-1 库拉索
-  m10: { homeScore: 2, awayScore: 2 },  // 荷兰 2-2 日本
-  m11: { homeScore: 1, awayScore: 0 },  // 科特迪瓦 1-0 厄瓜多尔
-  m12: { homeScore: 5, awayScore: 1 },  // 瑞典 5-1 突尼斯
-  m13: { homeScore: 0, awayScore: 0 },  // 西班牙 0-0 佛得角
-  m14: { homeScore: 1, awayScore: 1 },  // 比利时 1-1 埃及
-  m15: { homeScore: 1, awayScore: 1 },  // 沙特 1-1 乌拉圭
-  m16: { homeScore: 2, awayScore: 2 },  // 伊朗 2-2 新西兰
+  // === June 12-13 . Round 1 ===
+  m1:  { homeScore: 2, awayScore: 0 },  // Mexico 2-0 South Africa
+  m2:  { homeScore: 2, awayScore: 1 },  // South Korea 2-1 Czechia
+  // June 13
+  m3:  { homeScore: 1, awayScore: 1 },  // Canada 1-1 Bosnia
+  m4:  { homeScore: 4, awayScore: 1 },  // USA 4-1 Paraguay
+  // June 14
+  m5:  { homeScore: 1, awayScore: 1 },  // Qatar 1-1 Switzerland
+  m6:  { homeScore: 1, awayScore: 1 },  // Brazil 1-1 Morocco
+  m7:  { homeScore: 0, awayScore: 1 },  // Haiti 0-1 Scotland
+  m8:  { homeScore: 2, awayScore: 0 },  // Australia 2-0 Turkey
+  // June 15
+  m9:  { homeScore: 7, awayScore: 1 },  // Germany 7-1 Curacao
+  m10: { homeScore: 2, awayScore: 2 },  // Netherlands 2-2 Japan
+  m11: { homeScore: 1, awayScore: 0 },  // Ivory Coast 1-0 Ecuador
+  m12: { homeScore: 5, awayScore: 1 },  // Sweden 5-1 Tunisia
+  // June 16
+  m13: { homeScore: 0, awayScore: 0 },  // Spain 0-0 Cape Verde
+  m14: { homeScore: 1, awayScore: 1 },  // Belgium 1-1 Egypt
+  m15: { homeScore: 1, awayScore: 1 },  // Saudi Arabia 1-1 Uruguay
+  m16: { homeScore: 2, awayScore: 2 },  // Iran 2-2 New Zealand
+  // === June 17 . Round 1 ===
+  m17: { homeScore: 3, awayScore: 1 },  // France 3-1 Senegal
+  m18: { homeScore: 1, awayScore: 4 },  // Iraq 1-4 Norway
+  m19: { homeScore: 3, awayScore: 0 },  // Argentina 3-0 Algeria
+  m20: { homeScore: 3, awayScore: 1 },  // Austria 3-1 Jordan
+  // === June 18 . Round 1 ===
+  m21: { homeScore: 1, awayScore: 1 },  // Portugal 1-1 DR Congo
+  m22: { homeScore: 4, awayScore: 2 },  // England 4-2 Croatia
+  m23: { homeScore: 1, awayScore: 0 },  // Ghana 1-0 Panama
+  m24: { homeScore: 1, awayScore: 3 },  // Uzbekistan 1-3 Colombia
+  // === June 19 . Round 2 ===
+  m25: { homeScore: 1, awayScore: 1 },  // Czechia 1-1 South Africa
+  m26: { homeScore: 4, awayScore: 1 },  // Switzerland 4-1 Bosnia
+  m27: { homeScore: 6, awayScore: 0 },  // Canada 6-0 Qatar
+  m28: { homeScore: 1, awayScore: 0 },  // Mexico 1-0 South Korea
+  // === June 20 . Round 2 ===
+  m29: { homeScore: 2, awayScore: 0 },  // USA 2-0 Australia
+  m30: { homeScore: 0, awayScore: 1 },  // Scotland 0-1 Morocco
+  m31: { homeScore: 3, awayScore: 0 },  // Brazil 3-0 Haiti
+  m32: { homeScore: 0, awayScore: 1 },  // Turkey 0-1 Paraguay
+  // === June 21 . Round 2 ===
+  m33: { homeScore: 5, awayScore: 1 },  // Netherlands 5-1 Sweden
+  m34: { homeScore: 2, awayScore: 1 },  // Germany 2-1 Ivory Coast
+  m35: { homeScore: 0, awayScore: 0 },  // Ecuador 0-0 Curacao
+  m36: { homeScore: 0, awayScore: 4 },  // Tunisia 0-4 Japan
+  // === June 22 . Round 2 ===
+  m37: { homeScore: 4, awayScore: 0 },  // Spain 4-0 Saudi Arabia
+  m38: { homeScore: 0, awayScore: 0 },  // Belgium 0-0 Iran
+  m39: { homeScore: 2, awayScore: 2 },  // Uruguay 2-2 Cape Verde
+  m40: { homeScore: 1, awayScore: 3 },  // New Zealand 1-3 Egypt
+  // === June 23 . Round 2 ===
+  m41: { homeScore: 2, awayScore: 0 },  // Argentina 2-0 Austria
+  m42: { homeScore: 3, awayScore: 0 },  // France 3-0 Iraq
+  m43: { homeScore: 3, awayScore: 2 },  // Norway 3-2 Senegal
+  m44: { homeScore: 1, awayScore: 2 },  // Jordan 1-2 Algeria
+  // === June 24 . Round 2 ===
+  m45: { homeScore: 5, awayScore: 0 },  // Portugal 5-0 Uzbekistan
+  m46: { homeScore: 0, awayScore: 0 },  // England 0-0 Ghana
+  m47: { homeScore: 0, awayScore: 1 },  // Panama 0-1 Croatia
+  m48: { homeScore: 1, awayScore: 0 },  // Colombia 1-0 DR Congo
+  // === June 25 . Round 3 ===
+  m49: { homeScore: 2, awayScore: 1 },  // Switzerland 2-1 Canada
+  m50: { homeScore: 3, awayScore: 1 },  // Bosnia 3-1 Qatar
+  m51: { homeScore: 4, awayScore: 2 },  // Morocco 4-2 Haiti
+  m52: { homeScore: 0, awayScore: 3 },  // Scotland 0-3 Brazil
+  m53: { homeScore: 1, awayScore: 0 },  // South Africa 1-0 South Korea
+  m54: { homeScore: 0, awayScore: 3 },  // Czechia 0-3 Mexico
+  // === June 26 . Round 3 ===
+  m55: { homeScore: 0, awayScore: 2 },  // Curacao 0-2 Ivory Coast
+  m56: { homeScore: 2, awayScore: 1 },  // Ecuador 2-1 Germany
+  m57: { homeScore: 1, awayScore: 3 },  // Tunisia 1-3 Netherlands
+  m58: { homeScore: 1, awayScore: 1 },  // Japan 1-1 Sweden
+  m59: { homeScore: 3, awayScore: 2 },  // Turkey 3-2 USA
+  m60: { homeScore: 0, awayScore: 0 },  // Paraguay 0-0 Australia
+  // === June 27 . Round 3 ===
+  m61: { homeScore: 5, awayScore: 0 },  // Senegal 5-0 Iraq
+  m62: { homeScore: 1, awayScore: 4 },  // Norway 1-4 France
+  m63: { homeScore: 0, awayScore: 0 },  // Cape Verde 0-0 Saudi Arabia
+  m64: { homeScore: 0, awayScore: 1 },  // Uruguay 0-1 Spain
+  m65: { homeScore: 1, awayScore: 1 },  // Egypt 1-1 Iran
+  m66: { homeScore: 1, awayScore: 5 },  // New Zealand 1-5 Belgium
+  // === June 28 . Round 3 ===
+  m67: { homeScore: 2, awayScore: 1 },  // Croatia 2-1 Ghana
+  m68: { homeScore: 0, awayScore: 2 },  // Panama 0-2 England
+  m69: { homeScore: 0, awayScore: 0 },  // Colombia 0-0 Portugal
+  m70: { homeScore: 3, awayScore: 1 },  // DR Congo 3-1 Uzbekistan
+  m71: { homeScore: 3, awayScore: 3 },  // Algeria 3-3 Austria
+  m72: { homeScore: 1, awayScore: 3 },  // Jordan 1-3 Argentina
+  // === Round of 32 . 6.29-7.4 ===
+  'r32-1':  { homeScore: 0, awayScore: 1 },  // South Africa 0-1 Canada
+  'r32-2':  { homeScore: 2, awayScore: 1 },  // Brazil 2-1 Japan
+  'r32-3':  { homeScore: 4, awayScore: 5 },  // Germany 4-5 Paraguay
+  'r32-4':  { homeScore: 3, awayScore: 4 },  // Netherlands 3-4 Morocco
+  'r32-5':  { homeScore: 1, awayScore: 2 },  // Ivory Coast 1-2 Norway
+  'r32-6':  { homeScore: 3, awayScore: 0 },  // France 3-0 Sweden
+  'r32-7':  { homeScore: 2, awayScore: 0 },  // Mexico 2-0 Ecuador
+  'r32-8':  { homeScore: 2, awayScore: 1 },  // England 2-1 DR Congo
+  'r32-9':  { homeScore: 3, awayScore: 2 },  // Belgium 3-2 Senegal
+  'r32-10': { homeScore: 2, awayScore: 0 },  // USA 2-0 Bosnia
+  'r32-11': { homeScore: 3, awayScore: 0 },  // Spain 3-0 Austria
+  'r32-12': { homeScore: 2, awayScore: 1 },  // Portugal 2-1 Croatia
+  'r32-13': { homeScore: 2, awayScore: 0 },  // Switzerland 2-0 Algeria
+  'r32-14': { homeScore: 3, awayScore: 5 },  // Australia 3-5 Egypt
+  'r32-15': { homeScore: 3, awayScore: 2 },  // Argentina 3-2 Cape Verde
+  'r32-16': { homeScore: 1, awayScore: 0 },  // Colombia 1-0 Ghana
 };
 
 /**

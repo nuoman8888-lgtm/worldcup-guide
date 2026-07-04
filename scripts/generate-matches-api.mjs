@@ -196,6 +196,14 @@ const COMPLETED = {
   m67: { homeScore: 2, awayScore: 1 },   m68: { homeScore: 0, awayScore: 2 },
   m69: { homeScore: 0, awayScore: 0 },   m70: { homeScore: 3, awayScore: 1 },
   m71: { homeScore: 3, awayScore: 3 },   m72: { homeScore: 1, awayScore: 3 },
+  'r32-1':  { homeScore: 0, awayScore: 1 },   'r32-2':  { homeScore: 2, awayScore: 1 },
+  'r32-3':  { homeScore: 4, awayScore: 5 },   'r32-4':  { homeScore: 3, awayScore: 4 },
+  'r32-5':  { homeScore: 1, awayScore: 2 },   'r32-6':  { homeScore: 3, awayScore: 0 },
+  'r32-7':  { homeScore: 2, awayScore: 0 },   'r32-8':  { homeScore: 2, awayScore: 1 },
+  'r32-9':  { homeScore: 3, awayScore: 2 },   'r32-10': { homeScore: 2, awayScore: 0 },
+  'r32-11': { homeScore: 3, awayScore: 0 },   'r32-12': { homeScore: 2, awayScore: 1 },
+  'r32-13': { homeScore: 2, awayScore: 0 },   'r32-14': { homeScore: 3, awayScore: 5 },
+  'r32-15': { homeScore: 3, awayScore: 2 },   'r32-16': { homeScore: 1, awayScore: 0 },
 };
 
 // ── Stage mapping ──
