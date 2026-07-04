@@ -152,23 +152,34 @@ function buildGroupMatches(): Match[] {
   const koVenues = ['Estadio Azteca', 'BMO Field', 'SoFi Stadium', 'MetLife Stadium', 'AT&T Stadium', 'Mercedes-Benz Stadium', 'Lincoln Financial Field', 'Hard Rock Stadium'];
   const koCities = ['墨西哥城', '多伦多', '洛杉矶', '纽约', '达拉斯', '亚特兰大', '费城', '迈阿密'];
 
-  // Round of 32: June 29 – July 4 (16 matches)
-  const r32Slots = [
+  // Round of 32: June 29 - July 4 (16 matches)
+  const r32Slots: Array<{date:string; time:string; home:string; away:string}> = [
     // June 29
-    ['2026-06-29','03:00'],
+    { date:'2026-06-29', time:'03:00', home:'south-africa', away:'canada' },
     // June 30
-    ['2026-06-30','01:00'], ['2026-06-30','04:30'], ['2026-06-30','09:00'],
+    { date:'2026-06-30', time:'01:00', home:'brazil', away:'japan' },
+    { date:'2026-06-30', time:'04:30', home:'germany', away:'paraguay' },
+    { date:'2026-06-30', time:'09:00', home:'netherlands', away:'morocco' },
     // July 1
-    ['2026-07-01','01:00'], ['2026-07-01','05:00'], ['2026-07-01','09:00'],
+    { date:'2026-07-01', time:'01:00', home:'ivory-coast', away:'norway' },
+    { date:'2026-07-01', time:'05:00', home:'france', away:'sweden' },
+    { date:'2026-07-01', time:'09:00', home:'mexico', away:'ecuador' },
     // July 2
-    ['2026-07-02','00:00'], ['2026-07-02','04:00'], ['2026-07-02','08:00'],
+    { date:'2026-07-02', time:'00:00', home:'england', away:'dr-congo' },
+    { date:'2026-07-02', time:'04:00', home:'belgium', away:'senegal' },
+    { date:'2026-07-02', time:'08:00', home:'usa', away:'bosnia' },
     // July 3
-    ['2026-07-03','03:00'], ['2026-07-03','07:00'], ['2026-07-03','11:00'],
+    { date:'2026-07-03', time:'03:00', home:'spain', away:'austria' },
+    { date:'2026-07-03', time:'07:00', home:'portugal', away:'croatia' },
+    { date:'2026-07-03', time:'11:00', home:'switzerland', away:'algeria' },
     // July 4
-    ['2026-07-04','02:00'], ['2026-07-04','06:00'], ['2026-07-04','09:30'],
+    { date:'2026-07-04', time:'02:00', home:'australia', away:'egypt' },
+    { date:'2026-07-04', time:'06:00', home:'argentina', away:'cape-verde' },
+    { date:'2026-07-04', time:'09:30', home:'colombia', away:'ghana' },
   ];
-  for (let i=0; i<16; i++) {
-    matches.push({ id:`r32-${i+1}`, date:r32Slots[i][0], time:r32Slots[i][1], timeUTC:toUTC(r32Slots[i][1]), homeTeamId:'TBD', awayTeamId:'TBD', stage:'round32', status:'upcoming', venue:koVenues[i%8], city:koCities[i%8] });
+  for (let i=0; i<r32Slots.length; i++) {
+    const s = r32Slots[i];
+    matches.push({ id:`r32-${i+1}`, date:s.date, time:s.time, timeUTC:toUTC(s.time), homeTeamId:s.home, awayTeamId:s.away, stage:'round32', status:'upcoming', venue:koVenues[i%8], city:koCities[i%8] });
   }
 
   // Round of 16: July 5-8 (8 matches)
