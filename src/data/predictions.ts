@@ -117,6 +117,14 @@ const MANUAL: Record<string, Record<string, string>> = {
   'r16-6': { claude: '2-1 / 1-0', chatgpt: '1-2 / 1-1', deepseek: '2-1 / 1-1', qwen: '2-1 / 1-1' },  // 美国 vs 比利时
   'r16-7': { claude: '3-0 / 2-0', chatgpt: '2-0 / 3-1', deepseek: '2-0 / 1-0', qwen: '2-0 / 1-0' },  // 阿根廷 vs 埃及
   'r16-8': { claude: '1-0 / 1-1', chatgpt: '1-1 / 1-2', deepseek: '1-1 / 0-0', qwen: '1-1 / 1-2' },  // 瑞士 vs 哥伦比亚
+  // ═══ Quarter-finals · 7.10-7.12 ═══
+  'qf-1': { claude: '2-0 / 3-1', chatgpt: '2-0 / 2-1', deepseek: '2-1 / 1-0', qwen: '2-0 / 1-0' },  // 法国 vs 摩洛哥
+  'qf-2': { claude: '2-1 / 1-0', chatgpt: '2-1 / 1-1', deepseek: '2-0 / 1-0', qwen: '2-0 / 1-0' },  // 西班牙 vs 比利时
+  'qf-3': { claude: '2-1 / 1-0', chatgpt: '1-2 / 1-1', deepseek: '1-2 / 0-1', qwen: '1-2 / 1-1' },  // 挪威 vs 英格兰
+  'qf-4': { claude: '2-0 / 1-0', chatgpt: '2-0 / 1-0', deepseek: '2-0 / 1-0', qwen: '2-0 / 1-0' },  // 阿根廷 vs 瑞士
+  // ═══ Semi-finals · 7.15-7.16 ═══
+  'sf-1': { claude: '2-1 / 1-1(加时)', chatgpt: '1-1 / 2-1', deepseek: '1-0 / 2-1', qwen: '2-1 / 1-0' },  // 法国 vs 西班牙
+  'sf-2': { claude: '1-2 / 1-1(加时)', chatgpt: '1-2 / 1-1', deepseek: '1-1(加时/点球) / 0-1', qwen: '2-1 / 1-0' },  // 英格兰 vs 阿根廷
 };
 
 /** Look up match by ID */

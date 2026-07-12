@@ -203,17 +203,20 @@ function buildGroupMatches(): Match[] {
   }
 
   // Quarter-finals: July 10-12 (4 matches)
-  const qfSlots = [
-    ['2026-07-10','04:00'], ['2026-07-11','03:00'],
-    ['2026-07-12','05:00'], ['2026-07-12','09:00'],
+  const qfData: Array<{date:string; time:string; home:string; away:string; venue:string; city:string}> = [
+    { date:'2026-07-10', time:'04:00', home:'france',       away:'morocco',     venue:'Gillette Stadium',        city:'波士顿' },
+    { date:'2026-07-11', time:'03:00', home:'spain',        away:'belgium',     venue:'SoFi Stadium',            city:'洛杉矶' },
+    { date:'2026-07-12', time:'05:00', home:'norway',       away:'england',     venue:'Hard Rock Stadium',       city:'迈阿密' },
+    { date:'2026-07-12', time:'09:00', home:'argentina',    away:'switzerland', venue:'Arrowhead Stadium',        city:'堪萨斯城' },
   ];
-  for (let i=0; i<4; i++) {
-    matches.push({ id:`qf-${i+1}`, date:qfSlots[i][0], time:qfSlots[i][1], timeUTC:toUTC(qfSlots[i][1]), homeTeamId:'TBD', awayTeamId:'TBD', stage:'quarterfinal', status:'upcoming', venue:koVenues[i], city:koCities[i] });
+  for (let i=0; i<qfData.length; i++) {
+    const q = qfData[i];
+    matches.push({ id:`qf-${i+1}`, date:q.date, time:q.time, timeUTC:toUTC(q.time), homeTeamId:q.home, awayTeamId:q.away, stage:'quarterfinal', status:'upcoming', venue:q.venue, city:q.city });
   }
 
   // Semis: July 15-16
-  matches.push({ id:'sf-1', date:'2026-07-15', time:'03:00', timeUTC:'19:00', homeTeamId:'TBD', awayTeamId:'TBD', stage:'semifinal', status:'upcoming', venue:'AT&T Stadium', city:'达拉斯' });
-  matches.push({ id:'sf-2', date:'2026-07-16', time:'03:00', timeUTC:'19:00', homeTeamId:'TBD', awayTeamId:'TBD', stage:'semifinal', status:'upcoming', venue:'Mercedes-Benz Stadium', city:'亚特兰大' });
+  matches.push({ id:'sf-1', date:'2026-07-15', time:'03:00', timeUTC:'19:00', homeTeamId:'france', awayTeamId:'spain', stage:'semifinal', status:'upcoming', venue:'AT&T Stadium', city:'达拉斯' });
+  matches.push({ id:'sf-2', date:'2026-07-16', time:'03:00', timeUTC:'19:00', homeTeamId:'england', awayTeamId:'argentina', stage:'semifinal', status:'upcoming', venue:'Mercedes-Benz Stadium', city:'亚特兰大' });
 
   // 3rd place: July 19
   matches.push({ id:'3rd', date:'2026-07-19', time:'05:00', timeUTC:'21:00', homeTeamId:'TBD', awayTeamId:'TBD', stage:'thirdPlace', status:'upcoming', venue:'Hard Rock Stadium', city:'迈阿密' });
@@ -371,6 +374,15 @@ export const COMPLETED_MATCHES: Record<string, { homeScore: number; awayScore: n
   'r32-14': { homeScore: 3, awayScore: 5 },  // Australia 3-5 Egypt
   'r32-15': { homeScore: 3, awayScore: 2 },  // Argentina 3-2 Cape Verde
   'r32-16': { homeScore: 1, awayScore: 0 },  // Colombia 1-0 Ghana
+  // === Round of 16 · 7.5-7.8 ===
+  'r16-1': { homeScore: 0, awayScore: 3 },  // Canada 0-3 Morocco
+  'r16-2': { homeScore: 0, awayScore: 1 },  // Paraguay 0-1 France
+  'r16-3': { homeScore: 1, awayScore: 2 },  // Brazil 1-2 Norway
+  'r16-4': { homeScore: 2, awayScore: 3 },  // Mexico 2-3 England
+  'r16-5': { homeScore: 0, awayScore: 1 },  // Portugal 0-1 Spain
+  'r16-6': { homeScore: 1, awayScore: 4 },  // USA 1-4 Belgium
+  'r16-7': { homeScore: 3, awayScore: 2 },  // Argentina 3-2 Egypt
+  'r16-8': { homeScore: 4, awayScore: 3 },  // Switzerland 4-3 Colombia
 };
 
 /**
