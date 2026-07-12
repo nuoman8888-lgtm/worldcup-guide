@@ -49,7 +49,7 @@ export interface LeaderboardEntry {
    ═══════════════════════════════════════════════════════════ */
 
 const STORAGE_KEY = 'wc_ai_lab';
-const DATA_VERSION = 14; // v14: added Round of 16 predictions
+const DATA_VERSION = 16; // v16: added Quarter-final results + SF predictions
 
 function load(): StoredPrediction[] {
   if (typeof window === 'undefined') return [];

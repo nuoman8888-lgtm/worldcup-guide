@@ -145,13 +145,13 @@ const GROUP_SCHEDULE = [
   { id:'r16-7', d:'2026-07-08', t:'00:00', h:'argentina', a:'egypt' },
   { id:'r16-8', d:'2026-07-08', t:'04:00', h:'switzerland', a:'colombia' },
   // QF
-  { id:'qf-1', d:'2026-07-10', t:'04:00', h:'TBD', a:'TBD' },
-  { id:'qf-2', d:'2026-07-11', t:'03:00', h:'TBD', a:'TBD' },
-  { id:'qf-3', d:'2026-07-12', t:'05:00', h:'TBD', a:'TBD' },
-  { id:'qf-4', d:'2026-07-12', t:'09:00', h:'TBD', a:'TBD' },
+  { id:'qf-1', d:'2026-07-10', t:'04:00', h:'france', a:'morocco' },
+  { id:'qf-2', d:'2026-07-11', t:'03:00', h:'spain', a:'belgium' },
+  { id:'qf-3', d:'2026-07-12', t:'05:00', h:'norway', a:'england' },
+  { id:'qf-4', d:'2026-07-12', t:'09:00', h:'argentina', a:'switzerland' },
   // SF
-  { id:'sf-1', d:'2026-07-15', t:'03:00', h:'TBD', a:'TBD' },
-  { id:'sf-2', d:'2026-07-16', t:'03:00', h:'TBD', a:'TBD' },
+  { id:'sf-1', d:'2026-07-15', t:'03:00', h:'france', a:'spain' },
+  { id:'sf-2', d:'2026-07-16', t:'03:00', h:'england', a:'argentina' },
   // 3rd
   { id:'3rd', d:'2026-07-19', t:'05:00', h:'TBD', a:'TBD' },
   // Final
@@ -204,6 +204,14 @@ const COMPLETED = {
   'r32-11': { homeScore: 3, awayScore: 0 },   'r32-12': { homeScore: 2, awayScore: 1 },
   'r32-13': { homeScore: 2, awayScore: 0 },   'r32-14': { homeScore: 3, awayScore: 5 },
   'r32-15': { homeScore: 3, awayScore: 2 },   'r32-16': { homeScore: 1, awayScore: 0 },
+  // R16
+  'r16-1': { homeScore: 0, awayScore: 3 },   'r16-2': { homeScore: 0, awayScore: 1 },
+  'r16-3': { homeScore: 1, awayScore: 2 },   'r16-4': { homeScore: 2, awayScore: 3 },
+  'r16-5': { homeScore: 0, awayScore: 1 },   'r16-6': { homeScore: 1, awayScore: 4 },
+  'r16-7': { homeScore: 3, awayScore: 2 },   'r16-8': { homeScore: 4, awayScore: 3 },
+  // QF
+  'qf-1': { homeScore: 2, awayScore: 0 },   'qf-2': { homeScore: 2, awayScore: 1 },
+  'qf-3': { homeScore: 1, awayScore: 2 },   'qf-4': { homeScore: 3, awayScore: 1 },
 };
 
 // ── Stage mapping ──

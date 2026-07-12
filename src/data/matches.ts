@@ -383,6 +383,11 @@ export const COMPLETED_MATCHES: Record<string, { homeScore: number; awayScore: n
   'r16-6': { homeScore: 1, awayScore: 4 },  // USA 1-4 Belgium
   'r16-7': { homeScore: 3, awayScore: 2 },  // Argentina 3-2 Egypt
   'r16-8': { homeScore: 4, awayScore: 3 },  // Switzerland 4-3 Colombia
+  // === Quarter-finals · 7.10-7.12 ===
+  'qf-1': { homeScore: 2, awayScore: 0 },  // France 2-0 Morocco
+  'qf-2': { homeScore: 2, awayScore: 1 },  // Spain 2-1 Belgium
+  'qf-3': { homeScore: 1, awayScore: 2 },  // Norway 1-2 England (AET, 1-1 FT)
+  'qf-4': { homeScore: 3, awayScore: 1 },  // Argentina 3-1 Switzerland (AET, 1-1 FT)
 };
 
 /**
